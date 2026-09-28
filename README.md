@@ -1,22 +1,31 @@
-# Nosso Cantinho 💗
+# Nosso Cantinho 💗 (versão 2)
 
-App só de vocês dois. Abas: Carinho, Afazeres, Fotos, Recados, Nós (contador, datas, tema).
+Abas: Início (carinho + humor do dia), Afazeres, Fotos, Recados, Mais (cupons, desejos, cápsula do tempo, Nós, Ajustes).
 
-## 1) Sincronizar os dois celulares (Supabase, grátis, ~5 min)
-1. Crie conta em supabase.com e um projeto novo.
-2. SQL Editor > cole o conteúdo de `supabase.sql` > Run.
-3. Settings > API: copie a "Project URL" e a chave "anon public".
-4. Na primeira abertura do app (nos dois celulares), cole URL e chave e use o MESMO código secreto.
-Sem isso o app funciona, mas cada celular guarda só os próprios dados.
+## Como atualizar o app no GitHub
+Suba/substitua no repositório os arquivos desta pasta (arraste tudo, o GitHub substitui os que já existem).
+O build do APK começa sozinho. Depois é só baixar o novo APK e instalar POR CIMA do antigo (não precisa desinstalar).
 
-## 2) Gerar o APK (sem instalar nada: GitHub Actions)
-1. Crie um repositório PRIVADO no GitHub e suba esta pasta.
-2. Aba Actions > "Gerar APK" > Run workflow (leva ~5 min).
-3. Baixe o artefato `nosso-cantinho-apk`, extraia e mande o `app-debug.apk` pelo WhatsApp.
-4. No Android: abra o arquivo e permita "instalar de fontes desconhecidas".
+## 1) Supabase (dados + fotos)
+1. SQL Editor > cole o `supabase.sql` inteiro > Run. (Se você já rodou a versão antiga, rode este de novo: ele só acrescenta as fotos.)
+2. Settings > API: copie "Project URL" e "anon public" e cole no app (Mais > Ajustes).
+3. Use o MESMO código secreto nos dois celulares.
 
-## Alternativa: Android Studio
-`npm install && npx cap add android && npx cap sync android`, abra a pasta `android/` no Android Studio e use Build > Build APK.
+## 2) Notificações push (Firebase + Supabase)
+### 2.1 Firebase
+1. console.firebase.google.com > Adicionar projeto (nome: nosso-cantinho, desligue o Analytics).
+2. No projeto: ícone do Android (Adicionar app) > nome do pacote: `com.nosso.cantinho` > Registrar > baixe o `google-services.json`.
+3. Suba o `google-services.json` na RAIZ do repositório GitHub (junto do package.json).
+4. Engrenagem > Configurações do projeto > Contas de serviço > "Gerar nova chave privada". Baixa um arquivo .json (guarde, NÃO suba no GitHub).
+### 2.2 Supabase
+1. Edge Functions > Deploy a new function > Via Editor. Nome: `notify`.
+2. Apague o exemplo e cole o conteúdo de `supabase-function/notify.ts`. Deploy.
+3. Edge Functions > Secrets > Add new secret: nome `FIREBASE_SERVICE_ACCOUNT`, valor = TODO o conteúdo do .json do passo 2.1.4.
+### 2.3 No celular
+Reinstale o APK novo, abra o app, toque em "Permitir" nas notificações. Pronto: pedidos, recados, cupons, fotos etc. avisam o outro celular.
+
+## 3) Repositório privado (recomendado)
+Depois de subir o google-services.json: Settings > Danger Zone > Change visibility > Private. O Actions continua funcionando.
 
 ## Testar no computador
 `npm run serve` e abra http://localhost:5173

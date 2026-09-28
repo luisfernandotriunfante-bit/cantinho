@@ -3,6 +3,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+concurrency:
+  group: apk
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,6 +17,12 @@ jobs:
         with: { distribution: temurin, java-version: 21 }
       - run: npm install
       - run: npx cap add android
+      - name: Firebase (notificacoes push)
+        run: |
+          if [ -f google-services.json ]; then cp google-services.json android/app/google-services.json; echo "google-services.json instalado"; else echo "sem google-services.json (push desligado)"; fi
+      - name: Icone do app
+        continue-on-error: true
+        run: npx @capacitor/assets generate --android --iconBackgroundColor '#ff9ec4' --iconBackgroundColorDark '#ff9ec4'
       - run: npx cap sync android
       - name: Compilar APK
         working-directory: android

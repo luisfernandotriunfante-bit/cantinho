@@ -8,93 +8,139 @@
 <style>
 :root, [data-theme="rosa"]{
   --bg:#fff0f6; --bg2:#ffe0ee; --card:#ffffff; --ink:#5a2a41; --soft:#a5677f;
-  --accent:#ff6fa5; --accent2:#ff9ec4; --on-accent:#fff; --line:#ffc9de;
+  --accent:#ff6fa5; --accent2:#ff9ec4; --on-accent:#fff; --line:#ffc9de; --dot:rgba(255,111,165,.13);
   --radius:22px; --font:'Trebuchet MS','Segoe UI',system-ui,sans-serif; --shadow:0 6px 18px rgba(255,111,165,.22);
 }
 [data-theme="vintage"]{
   --bg:#f6ecdc; --bg2:#ecdcbf; --card:#fffaf0; --ink:#4b3424; --soft:#8a6a52;
-  --accent:#c0623f; --accent2:#d99a6c; --on-accent:#fff8ee; --line:#dcc6a3;
+  --accent:#c0623f; --accent2:#d99a6c; --on-accent:#fff8ee; --line:#dcc6a3; --dot:rgba(192,98,63,.10);
   --radius:12px; --font:Georgia,'Times New Roman',serif; --shadow:0 4px 12px rgba(120,80,40,.2);
 }
 [data-theme="minimal"]{
   --bg:#fbfbfc; --bg2:#f0f0f3; --card:#ffffff; --ink:#22222a; --soft:#7b7b88;
-  --accent:#e0566b; --accent2:#f08a99; --on-accent:#fff; --line:#e6e6ec;
+  --accent:#e0566b; --accent2:#f08a99; --on-accent:#fff; --line:#e6e6ec; --dot:rgba(224,86,107,.06);
   --radius:16px; --font:system-ui,-apple-system,'Segoe UI',sans-serif; --shadow:0 2px 10px rgba(0,0,0,.07);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--font);overscroll-behavior:none;
-  padding-top:env(safe-area-inset-top);}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);overscroll-behavior:none;padding-top:env(safe-area-inset-top);
+  background-image:radial-gradient(var(--dot) 2px,transparent 2.5px),radial-gradient(var(--dot) 2px,transparent 2.5px);
+  background-size:34px 34px;background-position:0 0,17px 17px;transition:background-color .5s,color .5s}
 #app{max-width:520px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column}
 header{padding:14px 18px 8px;display:flex;align-items:center;justify-content:space-between}
 header h1{font-size:20px;margin:0;letter-spacing:.3px}
 header small{color:var(--soft);display:block;font-size:12px;margin-top:2px}
-#sync{font-size:12px;color:var(--soft)}
-main{flex:1;overflow-y:auto;padding:6px 16px 90px}
+#sync{font-size:12px;color:var(--soft);text-align:right}
+main{flex:1;overflow-y:auto;padding:6px 16px 96px}
+main.in>*{animation:rise .45s both}
+main.in>*:nth-child(2){animation-delay:.05s}main.in>*:nth-child(3){animation-delay:.1s}
+main.in>*:nth-child(4){animation-delay:.15s}main.in>*:nth-child(5){animation-delay:.2s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 nav{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;background:var(--card);
-  display:flex;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
-nav button{flex:1;border:0;background:none;padding:9px 0 8px;font-size:22px;color:var(--soft);font-family:var(--font)}
+  display:flex;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5;
+  box-shadow:0 -6px 20px rgba(0,0,0,.04)}
+nav button{flex:1;border:0;background:none;padding:9px 0 8px;font-size:22px;color:var(--soft);font-family:var(--font);transition:transform .2s}
 nav button span{display:block;font-size:10.5px;margin-top:1px}
-nav button.on{color:var(--accent)}
-.card{background:var(--card);border-radius:var(--radius);padding:16px;margin:10px 0;box-shadow:var(--shadow)}
+nav button.on{color:var(--accent);transform:translateY(-2px) scale(1.08)}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin:12px 0;box-shadow:var(--shadow)}
 h2{font-size:16px;margin:0 0 10px}
 .muted{color:var(--soft);font-size:13px}
-button.btn{background:var(--accent);color:var(--on-accent);border:0;border-radius:999px;padding:11px 20px;
-  font-size:15px;font-family:var(--font);box-shadow:var(--shadow)}
+button.btn{background:linear-gradient(135deg,var(--accent2),var(--accent));color:var(--on-accent);border:0;border-radius:999px;padding:11px 20px;
+  font-size:15px;font-family:var(--font);box-shadow:var(--shadow);transition:transform .15s}
 button.btn.ghost{background:transparent;color:var(--accent);box-shadow:none;border:1.5px solid var(--accent)}
-button.btn:active{transform:scale(.96)}
+button.btn:active{transform:scale(.95)}
+button.btn.sm{padding:7px 14px;font-size:13px}
 input,textarea,select{width:100%;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);
   border-radius:14px;padding:11px 13px;font-size:15px;font-family:var(--font);outline:none}
 input:focus,textarea:focus{border-color:var(--accent)}
 .row{display:flex;gap:8px;align-items:center}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 13px;font-size:14px;
-  color:var(--ink);font-family:var(--font)}
-.chip.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
-.big-heart{width:150px;height:150px;border-radius:50%;border:0;margin:8px auto;display:block;font-size:64px;
-  background:radial-gradient(circle at 30% 30%,var(--accent2),var(--accent));box-shadow:0 10px 30px rgba(0,0,0,.18);
-  animation:beat 2.4s infinite}
-.big-heart:active{transform:scale(.92)}
+.chip{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 13px;font-size:14px;color:var(--ink);font-family:var(--font);transition:all .15s}
+.chip.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent);transform:scale(1.04)}
+.heart-wrap{position:relative;width:170px;height:170px;margin:10px auto}
+.heart-wrap::before,.heart-wrap::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent2);animation:ring 2.4s infinite;opacity:0;pointer-events:none}
+.heart-wrap::after{animation-delay:1.2s}
+@keyframes ring{0%{transform:scale(.9);opacity:.7}100%{transform:scale(1.5);opacity:0}}
+.big-heart{position:relative;width:150px;height:150px;border-radius:50%;border:0;margin:10px;font-size:64px;
+  background:radial-gradient(circle at 30% 30%,var(--accent2),var(--accent));box-shadow:0 10px 30px rgba(0,0,0,.18);animation:beat 2.4s infinite}
+.big-heart:active{transform:scale(.9)}
 @keyframes beat{0%,100%{transform:scale(1)}8%{transform:scale(1.08)}16%{transform:scale(1)}24%{transform:scale(1.05)}}
 .req{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
 .req:last-child{border:0}
 .req .ic{font-size:28px}
-.req .tx{flex:1}
+.req .tx{flex:1;min-width:0}
 .req .tx b{display:block}
 .todo{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px dashed var(--line)}
 .todo:last-child{border:0}
-.todo .box{width:26px;height:26px;border-radius:50%;border:2px solid var(--accent);background:none;flex:none;
-  color:var(--on-accent);font-size:15px;line-height:1}
-.todo.done .box{background:var(--accent)}
+.todo .box{width:26px;height:26px;border-radius:50%;border:2px solid var(--accent);background:none;flex:none;color:var(--on-accent);font-size:15px;line-height:1;transition:all .2s}
+.todo.done .box{background:var(--accent);transform:scale(1.1)}
 .todo.done .tx{text-decoration:line-through;opacity:.55}
-.todo .tx{flex:1}
+.todo .tx{flex:1;min-width:0}
 .x{background:none;border:0;color:var(--soft);font-size:18px;padding:4px 8px}
 .grid{columns:2;column-gap:10px}
-.photo{break-inside:avoid;margin-bottom:10px;background:var(--card);border-radius:calc(var(--radius) - 6px);overflow:hidden;
-  box-shadow:var(--shadow)}
-.photo img{width:100%;display:block}
+.photo{break-inside:avoid;margin-bottom:10px;background:var(--card);border-radius:calc(var(--radius) - 6px);overflow:hidden;box-shadow:var(--shadow)}
+.photo img{width:100%;display:block;background:var(--bg2);min-height:60px}
 .photo p{margin:0;padding:8px 10px;font-size:12.5px;color:var(--soft)}
-.hero{border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);background:var(--card);margin:10px 0}
+.hero{border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);background:var(--card);margin:12px 0}
 .hero img{width:100%;max-height:340px;object-fit:cover;display:block}
 .hero p{margin:0;padding:12px 14px}
-.note{padding:12px 14px;border-radius:var(--radius);margin:10px 0;max-width:86%;box-shadow:var(--shadow)}
-.note.me{background:var(--accent);color:var(--on-accent);margin-left:auto;border-bottom-right-radius:4px}
+.note{padding:12px 14px;border-radius:var(--radius);margin:10px 0;max-width:86%;box-shadow:var(--shadow);animation:rise .3s both}
+.note.me{background:linear-gradient(135deg,var(--accent2),var(--accent));color:var(--on-accent);margin-left:auto;border-bottom-right-radius:4px}
 .note.other{background:var(--card);border-bottom-left-radius:4px}
 .note small{display:block;opacity:.7;font-size:11px;margin-top:4px}
 .count{text-align:center;padding:10px}
 .count .n{font-size:56px;font-weight:bold;color:var(--accent);line-height:1}
 .toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:var(--ink);color:var(--bg);
-  padding:10px 18px;border-radius:999px;font-size:14px;z-index:20;opacity:0;pointer-events:none;transition:.3s}
+  padding:10px 18px;border-radius:999px;font-size:14px;z-index:60;opacity:0;pointer-events:none;transition:.3s;max-width:90vw;text-align:center}
 .toast.show{opacity:1}
-.float{position:fixed;pointer-events:none;font-size:28px;animation:up 1.4s forwards;z-index:30}
+.float{position:fixed;pointer-events:none;font-size:28px;animation:up 1.4s forwards;z-index:70}
 @keyframes up{to{transform:translateY(-220px);opacity:0}}
 .hide{display:none!important}
 label.l{display:block;font-size:13px;color:var(--soft);margin:12px 0 5px}
-.badge{background:var(--accent);color:var(--on-accent);border-radius:999px;font-size:11px;padding:1px 7px;margin-left:3px;
-  vertical-align:top}
+.badge{background:var(--accent);color:var(--on-accent);border-radius:999px;font-size:11px;padding:1px 7px;margin-left:3px;vertical-align:top}
+.moods{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mood{border:1.5px solid var(--line);background:var(--bg);border-radius:16px;padding:8px 2px;font-size:26px;font-family:var(--font);transition:all .15s}
+.mood small{display:block;font-size:10.5px;color:var(--soft);margin-top:2px}
+.mood.on{background:var(--accent);border-color:var(--accent);transform:scale(1.06)}
+.mood.on small{color:var(--on-accent)}
+.mood-line{display:flex;gap:10px;margin-top:12px}
+.mood-line>div{flex:1;background:var(--bg);border-radius:16px;padding:10px;text-align:center}
+.mood-line .e{font-size:34px}
+.menu{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.menu button{background:var(--card);border:0;border-radius:var(--radius);padding:20px 10px;box-shadow:var(--shadow);font-family:var(--font);color:var(--ink);font-size:15px;transition:transform .15s}
+.menu button:active{transform:scale(.95)}
+.menu .e{display:block;font-size:34px;margin-bottom:6px}
+.back{background:none;border:0;color:var(--accent);font-size:15px;font-family:var(--font);padding:6px 0}
+.coupon{position:relative;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--accent2),var(--accent));color:var(--on-accent);
+  border-radius:16px;padding:14px 16px;margin:10px 0;box-shadow:var(--shadow)}
+.coupon::before,.coupon::after{content:"";position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:var(--bg);transform:translateY(-50%)}
+.coupon::before{left:-8px}.coupon::after{right:-8px}
+.coupon .ic{font-size:32px}.coupon .tx{flex:1;min-width:0}.coupon .tx small{opacity:.85;display:block}
+.coupon.used{filter:grayscale(.85);opacity:.6}
+.coupon .btn{background:var(--card);color:var(--accent);box-shadow:none}
+.capsule{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+.capsule:last-child{border:0}
+.capsule .ic{font-size:30px}
+.capsule.locked .ic{animation:wob 2.5s infinite}
+@keyframes wob{0%,100%{transform:rotate(0)}10%{transform:rotate(-12deg)}20%{transform:rotate(10deg)}30%{transform:rotate(0)}}
+.banner{background:linear-gradient(135deg,var(--accent2),var(--accent));color:var(--on-accent);border-radius:var(--radius);padding:14px 16px;margin:12px 0;box-shadow:var(--shadow);text-align:center}
+.banner b{font-size:22px}
+#splash{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .6s}
+#splash .h{font-size:84px;animation:beat 1.4s infinite}
+#splash h1{margin:10px 0 0;font-size:26px}
+#splash p{color:var(--soft);margin:6px 0 0}
+#splash.out{opacity:0;pointer-events:none}
+#ov{position:fixed;inset:0;z-index:90;background:rgba(40,10,25,.72);display:none;align-items:center;justify-content:center;padding:22px}
+#ov.show{display:flex}
+#ov .paper{background:var(--card);border-radius:var(--radius);padding:26px 22px;max-width:420px;width:100%;max-height:82vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35);text-align:center;animation:pop .6s both}
+@keyframes pop{from{opacity:0;transform:scale(.6) rotate(-4deg)}to{opacity:1;transform:none}}
+#ov .env{font-size:96px;line-height:1;animation:beat 1.8s infinite;cursor:pointer;background:none;border:0}
+#ov .letter{white-space:pre-wrap;text-align:left;line-height:1.6;font-size:16px;margin:12px 0 18px}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:95}
 </style>
 </head>
 <body>
+<div id="splash"><div class="h">💗</div><h1>Nosso Cantinho</h1><p>só nosso</p></div>
 <div id="app">
   <header>
     <div><h1 id="title">Nosso Cantinho 💗</h1><small id="sub"></small></div>
@@ -103,6 +149,8 @@ label.l{display:block;font-size:13px;color:var(--soft);margin:12px 0 5px}
   <main id="main"></main>
   <nav id="nav"></nav>
 </div>
+<div id="ov"><div class="paper" id="paper"></div></div>
+<canvas id="confetti"></canvas>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -111,7 +159,11 @@ const $ = (s, el=document) => el.querySelector(s);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const now = () => Date.now();
-function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2200); }
+const pad = n => String(n).padStart(2,'0');
+const dstr = (d=new Date()) => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+function buzz(n=12){ try{ navigator.vibrate && navigator.vibrate(n); }catch(e){} }
+document.addEventListener('click', e => { if(e.target.closest('button')) buzz(10); });
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2400); }
 function floaty(emoji, n=7){ for(let i=0;i<n;i++){ const s=document.createElement('span'); s.className='float'; s.textContent=emoji;
   s.style.left=(20+Math.random()*60)+'vw'; s.style.bottom=(20+Math.random()*15)+'vh'; s.style.animationDelay=(i*.08)+'s';
   document.body.appendChild(s); setTimeout(()=>s.remove(),1800);} }
@@ -119,30 +171,58 @@ function ago(t){ const m=Math.round((now()-t)/60000); if(m<1) return 'agora'; if
   if(h<24) return h+' h'; return new Date(t).toLocaleDateString('pt-BR'); }
 function safeGet(k){ try{return localStorage.getItem(k)}catch(e){return null} }
 function safeSet(k,v){ try{localStorage.setItem(k,v)}catch(e){} }
+function daysBetween(a,b){ return Math.round((b-a)/86400000); }
+function todayMidnight(){ const n=new Date(); n.setHours(0,0,0,0); return n; }
+function parseD(s){ return new Date(s+'T00:00:00'); }
+function fmtD(s){ return parseD(s).toLocaleDateString('pt-BR'); }
+
+/* confete */
+function confetti(ms=3200){
+  const c=$('#confetti'), x=c.getContext('2d'); c.width=innerWidth; c.height=innerHeight;
+  const cols=['#ff6fa5','#ffd166','#7bdff2','#b28dff','#ff9770','#95d5b2'];
+  const ps=Array.from({length:140},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.6,r:4+Math.random()*6,c:cols[Math.random()*cols.length|0],
+    vy:2+Math.random()*3.5,vx:-1.5+Math.random()*3,rot:Math.random()*6,vr:-.2+Math.random()*.4}));
+  const t0=now();
+  (function f(){ x.clearRect(0,0,c.width,c.height); const el=now()-t0;
+    ps.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; x.save(); x.translate(p.x,p.y); x.rotate(p.rot); x.fillStyle=p.c; x.globalAlpha=Math.max(0,1-el/ms);
+      x.fillRect(-p.r,-p.r/2,p.r*2,p.r); x.restore(); });
+    if(el<ms) requestAnimationFrame(f); else x.clearRect(0,0,c.width,c.height); })();
+}
 
 /* ============ dados ============ */
-const COLS = ['carinhos','tarefas','fotos','recados','datas'];
+const COLS = ['carinhos','tarefas','fotos','recados','datas','humores','cupons','desejos','capsulas'];
+const SHARED = ['tema','inicio','niver','carta','cartaV'];
 const CARINHOS = [
   {k:'abraco',e:'🤗',t:'Abraço'}, {k:'cafune',e:'🥰',t:'Cafuné'}, {k:'beijo',e:'😘',t:'Beijinho'},
   {k:'colo',e:'🧸',t:'Colinho'}, {k:'massagem',e:'💆‍♀️',t:'Massagem'}, {k:'dengo',e:'🐱',t:'Dengo'},
   {k:'conversa',e:'💬',t:'Conversar'}, {k:'filme',e:'🎬',t:'Filminho juntos'}
 ];
+const MOODS = [['😍','Radiante'],['😊','Feliz'],['🥰','Carente'],['😴','Cansaço'],['😐','Meh'],['😢','Tristeza'],['😤','Estresse'],['🤒','Mal']];
+const MOOD_ALERT = ['🥰','😢','😤','🤒'];
 const FRASES = [
   'Você faz meu dia ficar mais leve.','Casa boa é onde você está.','Te escolheria em todas as vidas.',
   'Seu sorriso é meu lugar preferido.','Obrigado por cuidar de mim do seu jeitinho.','Hoje eu só quero te dar um abraço apertado.',
   'Você é minha pessoa favorita.','Com você até o cansaço passa.','Que sorte a minha ter você.'
 ];
-let S = { cfg:{ nome:'', par:'', eu:'', tema:'rosa', inicio:'', code:'', url:'', key:'' },
-          carinhos:[], tarefas:[], fotos:[], recados:[], datas:[], seen:{ recados:0 } };
-let tab = 'carinho';
+const CUPOM_MODELOS = [['💆‍♀️','Vale uma massagem'],['🍽️','Vale um jantar especial'],['🎬','Vale escolher o filme'],['🛋️','Vale um dia de preguiça'],['🍫','Vale um doce surpresa'],['🧹','Vale um dia sem louça']];
+const DESEJO_CATS = [['🎁','Presente'],['🍽️','Rolê'],['✈️','Viagem'],['💭','Sonho']];
+
+let S = { cfg:{ nome:'', par:'', eu:'', tema:'rosa', inicio:'', niver:'', carta:'', cartaV:0, code:'', url:'', key:'', u:0 },
+          seen:{ recados:0, carta:0, bday:'' } };
+COLS.forEach(c => S[c] = []);
+let tab = 'home', sub = null;
 
 function loadLocal(){
-  try{ const r = JSON.parse(safeGet('nc_state')||'null'); if(r) S = Object.assign(S, r, {cfg:Object.assign(S.cfg, r.cfg||{})}); }catch(e){}
+  try{ const r = JSON.parse(safeGet('nc_state')||'null'); if(r) S = Object.assign(S, r, {cfg:Object.assign(S.cfg, r.cfg||{}), seen:Object.assign(S.seen, r.seen||{})}); }catch(e){}
+  COLS.forEach(c => { if(!Array.isArray(S[c])) S[c]=[]; });
 }
 function saveLocal(){ safeSet('nc_state', JSON.stringify(S)); }
+const other = () => S.cfg.eu==='ela' ? 'ele' : 'ela';
+const live = c => S[c].filter(x=>!x.del);
 
-/* ============ sincronização (Supabase via fetch, opcional) ============ */
+/* ============ sincronização (Supabase via fetch) ============ */
 const remoteOn = () => S.cfg.url && S.cfg.key && S.cfg.code;
+const BASE = () => S.cfg.url.replace(/\/$/,'');
 const H = () => ({ apikey:S.cfg.key, Authorization:'Bearer '+S.cfg.key, 'Content-Type':'application/json' });
 const rk = c => S.cfg.code + ':' + c;
 
@@ -151,48 +231,75 @@ function mergeLists(a, b){
   [...(a||[]), ...(b||[])].forEach(it => { const o = m.get(it.id); if(!o || (it.u||0) > (o.u||0)) m.set(it.id, it); });
   return [...m.values()];
 }
+function sig(){ return COLS.map(c => S[c].length+':'+S[c].reduce((a,x)=>Math.max(a,x.u||0),0)).join('|') + '|' + SHARED.map(k=>S.cfg[k]).join('~'); }
+let syncing = false;
 async function syncNow(silent){
   if(!remoteOn()){ $('#sync').textContent = 'só neste celular'; return; }
+  if(syncing) return; syncing = true;
   try{
-    $('#sync').textContent = 'sincronizando…';
+    if(!silent) $('#sync').textContent = 'sincronizando…';
+    const before = sig();
     const keys = COLS.concat(['config']).map(c => '"'+rk(c)+'"').join(',');
-    const res = await fetch(S.cfg.url.replace(/\/$/,'') + '/rest/v1/kv?key=in.('+encodeURIComponent(keys)+')&select=key,value', {headers:H()});
+    const res = await fetch(BASE() + '/rest/v1/kv?key=in.('+encodeURIComponent(keys)+')&select=key,value', {headers:H()});
     if(!res.ok) throw new Error(res.status);
     const rows = await res.json(); const remote = {}; rows.forEach(r => remote[r.key.slice(S.cfg.code.length+1)] = r.value);
     const up = [];
     COLS.forEach(c => {
       const merged = mergeLists(S[c], remote[c]);
-      const changedLocal = JSON.stringify(merged) !== JSON.stringify(S[c]);
       const changedRemote = JSON.stringify(merged) !== JSON.stringify(remote[c]||[]);
       S[c] = merged;
       if(changedRemote) up.push({key:rk(c), value:merged, updated_at:new Date().toISOString()});
-      if(changedLocal) S._dirty = true;
     });
-    // config compartilhada: tema e data de inicio (o mais recente vence)
     const rc = remote.config || {};
-    const lc = { tema:S.cfg.tema, inicio:S.cfg.inicio, u:S.cfg.u||0 };
-    if((rc.u||0) > lc.u){ S.cfg.tema = rc.tema||S.cfg.tema; S.cfg.inicio = rc.inicio||S.cfg.inicio; S.cfg.u = rc.u; }
-    else if(lc.u > (rc.u||0)) up.push({key:rk('config'), value:lc, updated_at:new Date().toISOString()});
+    const lu = S.cfg.u||0;
+    if((rc.u||0) > lu){ SHARED.forEach(k => { if(rc[k]!==undefined) S.cfg[k]=rc[k]; }); S.cfg.u = rc.u; }
+    else if(lu > (rc.u||0)){ const v={u:lu}; SHARED.forEach(k=>v[k]=S.cfg[k]); up.push({key:rk('config'), value:v, updated_at:new Date().toISOString()}); }
     if(up.length){
-      const r2 = await fetch(S.cfg.url.replace(/\/$/,'') + '/rest/v1/kv?on_conflict=key', {method:'POST',
-        headers:Object.assign(H(),{Prefer:'resolution=merge-duplicates'}), body:JSON.stringify(up)});
+      const r2 = await fetch(BASE() + '/rest/v1/kv?on_conflict=key', {method:'POST', headers:Object.assign(H(),{Prefer:'resolution=merge-duplicates'}), body:JSON.stringify(up)});
       if(!r2.ok) throw new Error(r2.status);
     }
     saveLocal(); applyTheme(); detectNew();
     $('#sync').textContent = '💞 em sincronia';
-    if(!silent) render();
+    if(sig()!==before) render(true);
   }catch(e){ $('#sync').textContent = 'sem conexão'; }
+  syncing = false;
 }
-let lastPending = -1, lastNotes = -1;
+let last = null;
+function counts(){ return { pend:live('carinhos').filter(x=>!x.done&&x.by!==S.cfg.eu).length, notes:live('recados').filter(x=>x.by!==S.cfg.eu).length,
+  tasks:live('tarefas').filter(x=>x.by!==S.cfg.eu).length, cup:live('cupons').filter(x=>x.by!==S.cfg.eu).length }; }
 function detectNew(){
-  const pend = S.carinhos.filter(x=>!x.del && !x.done && x.by!==S.cfg.eu).length;
-  const notes = S.recados.filter(x=>!x.del && x.by!==S.cfg.eu).length;
-  if(lastPending>=0 && pend>lastPending){ toast('💗 Pedido novo de '+S.cfg.par+'!'); floaty('💗',5); }
-  if(lastNotes>=0 && notes>lastNotes){ toast('💌 Recadinho novo!'); }
-  lastPending = pend; lastNotes = notes;
-  render(true);
+  const c = counts();
+  if(last){
+    if(c.pend>last.pend){ toast('💗 Pedido novo de '+S.cfg.par+'!'); floaty('💗',5); }
+    else if(c.notes>last.notes) toast('💌 Recadinho novo!');
+    else if(c.tasks>last.tasks) toast('📝 Favorzinho novo na lista');
+    else if(c.cup>last.cup){ toast('🎟️ Você ganhou um cupom!'); floaty('🎟️',4); }
+  }
+  last = c;
 }
 function commit(){ saveLocal(); render(); syncNow(true); }
+
+/* ============ push (Capacitor + Firebase) ============ */
+async function notify(title, body){
+  if(!remoteOn()) return;
+  try{ fetch(BASE()+'/functions/v1/notify', {method:'POST', headers:H(), body:JSON.stringify({code:S.cfg.code, to:other(), title, body})}).catch(()=>{}); }catch(e){}
+}
+async function saveToken(tok){
+  if(!remoteOn()) return;
+  try{ await fetch(BASE()+'/rest/v1/kv?on_conflict=key', {method:'POST', headers:Object.assign(H(),{Prefer:'resolution=merge-duplicates'}),
+    body:JSON.stringify([{key:S.cfg.code+':token:'+S.cfg.eu, value:{token:tok,u:now()}, updated_at:new Date().toISOString()}])}); }catch(e){}
+}
+async function initPush(){
+  try{
+    const P = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.PushNotifications;
+    if(!P || !remoteOn() || !S.cfg.eu) return;
+    const perm = await P.requestPermissions(); if(perm.receive!=='granted') return;
+    await P.addListener('registration', t => saveToken(t.value));
+    await P.addListener('pushNotificationReceived', () => syncNow(true));
+    await P.addListener('pushNotificationActionPerformed', () => syncNow(true));
+    await P.register();
+  }catch(e){}
+}
 
 /* ============ tema ============ */
 function applyTheme(){
@@ -201,27 +308,62 @@ function applyTheme(){
   document.querySelector('meta[name=theme-color]').setAttribute('content', c||'#ffd6e7');
 }
 
-/* ============ telas ============ */
-const TABS = [['carinho','💗','Carinho'],['tarefas','📝','Afazeres'],['fotos','📸','Fotos'],['recados','💌','Recados'],['juntos','🎂','Nós']];
+/* ============ abertura (carta / aniversário) ============ */
+function showOverlay(html, onClose){
+  $('#paper').innerHTML = html; $('#ov').classList.add('show');
+  return () => { $('#ov').classList.remove('show'); onClose && onClose(); };
+}
+function openLetter(preview){
+  const text = S.cfg.carta || '';
+  if(!text) return;
+  let close;
+  const closeIt = () => { close(); if(!preview){ S.seen.carta = S.cfg.cartaV; saveLocal(); } };
+  close = showOverlay(`<button class="env" id="env">💌</button><p class="muted">toque no envelope para abrir</p>`);
+  $('#env').onclick = () => {
+    $('#paper').innerHTML = `<div style="font-size:40px">💗</div><div class="letter" id="lt"></div><button class="btn" id="lc">Guardar no coração</button>`;
+    confetti(2600); const el=$('#lt'); let i=0;
+    (function t(){ el.textContent = text.slice(0,i); i += 2; if(i<=text.length+1) setTimeout(t, 28); })();
+    $('#lc').onclick = closeIt;
+  };
+}
+function birthdayToday(){
+  if(!S.cfg.niver) return false; const d=parseD(S.cfg.niver), n=new Date();
+  return d.getMonth()===n.getMonth() && d.getDate()===n.getDate();
+}
+function birthdayFlow(){
+  const y = String(new Date().getFullYear());
+  const goLetter = () => { if(S.cfg.eu==='ela' && S.cfg.carta && S.seen.carta!==S.cfg.cartaV) setTimeout(()=>openLetter(false), 300); };
+  if(birthdayToday() && S.seen.bday!==y){
+    const who = S.cfg.eu==='ela' ? `Feliz aniversário,<br>${esc(S.cfg.nome)}! 🎂` : `Hoje é o dia dela!<br>🎂 ${esc(S.cfg.par)} 🎂`;
+    const close = showOverlay(`<div style="font-size:70px">🎉</div><h2 style="font-size:26px;line-height:1.3">${who}</h2>
+      <p class="muted">Que esse dia seja tão lindo quanto você.</p><button class="btn" id="bo">💗 Continuar</button>`, ()=>{ S.seen.bday=y; saveLocal(); goLetter(); });
+    confetti(4500); $('#bo').onclick = close;
+  } else goLetter();
+}
+
+/* ============ navegação ============ */
+const TABS = [['home','💗','Início'],['tarefas','📝','Afazeres'],['fotos','📸','Fotos'],['recados','💌','Recados'],['mais','✨','Mais']];
+let renderedKey = '';
 function renderNav(){
-  const pend = S.carinhos.filter(x=>!x.del&&!x.done&&x.by!==S.cfg.eu).length;
-  const tp = S.tarefas.filter(x=>!x.del&&!x.done&&x.by!==S.cfg.eu).length;
-  const un = S.recados.filter(x=>!x.del&&x.by!==S.cfg.eu&&x.t>(S.seen.recados||0)).length;
-  const badge = {carinho:pend, tarefas:tp, recados:un};
+  const c = counts();
+  const badge = {home:c.pend, tarefas:c.tasks, recados:live('recados').filter(x=>x.by!==S.cfg.eu&&x.t>(S.seen.recados||0)).length, mais:c.cup};
   $('#nav').innerHTML = TABS.map(([k,e,t]) =>
     `<button class="${tab===k?'on':''}" data-t="${k}">${e}<span>${t}${badge[k]?`<b class="badge">${badge[k]}</b>`:''}</span></button>`).join('');
-  $('#nav').querySelectorAll('button').forEach(b => b.onclick = () => { tab=b.dataset.t; if(tab==='recados'){S.seen.recados=now();saveLocal();} render(); $('#main').scrollTop=0; });
+  $('#nav').querySelectorAll('button').forEach(b => b.onclick = () => { tab=b.dataset.t; sub=null; render(); $('#main').scrollTop=0; });
 }
 function render(keepScroll){
   if(!S.cfg.eu){ return renderSetup(); }
-  const y = $('#main').scrollTop;
+  const main = $('#main'), y = main.scrollTop;
   const active = document.activeElement;
   if(keepScroll && active && /INPUT|TEXTAREA|SELECT/.test(active.tagName)) { renderNav(); return; }
   renderNav();
-  $('#title').textContent = 'Nosso Cantinho 💗';
   $('#sub').textContent = 'Oi, ' + S.cfg.nome + '!';
-  ({carinho:vCarinho, tarefas:vTarefas, fotos:vFotos, recados:vRecados, juntos:vJuntos}[tab])();
-  if(keepScroll) $('#main').scrollTop = y;
+  const key = tab+'/'+sub;
+  const anim = key !== renderedKey; renderedKey = key;
+  if(tab==='recados'){ S.seen.recados = now(); saveLocal(); }
+  ({home:vHome, tarefas:vTarefas, fotos:vFotos, recados:vRecados, mais:vMais}[tab])();
+  main.classList.remove('in'); if(anim){ void main.offsetWidth; main.classList.add('in'); }
+  if(keepScroll && !anim) main.scrollTop = y;
 }
 
 /* --- setup inicial --- */
@@ -235,6 +377,7 @@ function renderSetup(){
       <label class="l">Seu nome (como aparece pro outro)</label><input id="s_nome" placeholder="Seu nome">
       <label class="l">Nome do seu amor</label><input id="s_par" placeholder="Nome dela/dele">
       <label class="l">Data que vocês começaram (namoro/casamento)</label><input id="s_ini" type="date">
+      <label class="l">Aniversário dela</label><input id="s_niver" type="date">
       <label class="l">Código secreto de vocês (o mesmo nos dois celulares)</label><input id="s_code" placeholder="ex: nossoamor2026">
       <details style="margin-top:14px"><summary class="muted">Sincronizar entre os dois celulares (Supabase)</summary>
         <label class="l">URL do projeto</label><input id="s_url" placeholder="https://xxxx.supabase.co">
@@ -248,44 +391,68 @@ function renderSetup(){
   $('#s_ok').onclick = () => {
     if(!who || !$('#s_nome').value.trim()){ toast('Escolha quem é você e seu nome'); return; }
     S.cfg.eu = who; S.cfg.nome = $('#s_nome').value.trim(); S.cfg.par = $('#s_par').value.trim() || 'meu amor';
-    S.cfg.inicio = $('#s_ini').value; S.cfg.code = $('#s_code').value.trim(); S.cfg.url = $('#s_url').value.trim(); S.cfg.key = $('#s_key').value.trim();
-    S.cfg.u = now(); saveLocal(); render(); syncNow();
+    S.cfg.inicio = $('#s_ini').value; S.cfg.niver = $('#s_niver').value; S.cfg.code = $('#s_code').value.trim(); S.cfg.url = $('#s_url').value.trim(); S.cfg.key = $('#s_key').value.trim();
+    S.cfg.u = now(); saveLocal(); render(); syncNow(); initPush();
   };
 }
 
-/* --- carinho --- */
+/* --- início: humor + carinho --- */
 let pickC = 'abraco';
-function vCarinho(){
-  const list = S.carinhos.filter(x=>!x.del).sort((a,b)=>b.t-a.t);
+function vHome(){
+  const list = live('carinhos').sort((a,b)=>b.t-a.t);
   const pend = list.filter(x=>!x.done && x.by!==S.cfg.eu);
   const mine = list.filter(x=>!x.done && x.by===S.cfg.eu);
-  const done = list.filter(x=>x.done).slice(0,8);
+  const done = list.filter(x=>x.done).slice(0,6);
   const c = k => CARINHOS.find(x=>x.k===k) || CARINHOS[0];
-  $('#main').innerHTML = `
-    <div class="card" style="text-align:center">
-      <h2>Quer um carinho?</h2>
-      <div class="chips" id="cc" style="justify-content:center">${CARINHOS.map(x=>`<button class="chip ${pickC===x.k?'on':''}" data-k="${x.k}">${x.e} ${x.t}</button>`).join('')}</div>
-      <button class="big-heart" id="pedir">💗</button>
-      <div class="muted">toque no coração para pedir ${esc(c(pickC).t.toLowerCase())}</div>
-    </div>
+  const day = dstr();
+  const my = S.humores.find(x=>!x.del && x.id===day+':'+S.cfg.eu);
+  const his = S.humores.find(x=>!x.del && x.id===day+':'+other());
+  let bday = '';
+  if(S.cfg.niver){
+    const d = parseD(S.cfg.niver), n = todayMidnight(); let nx = new Date(n.getFullYear(), d.getMonth(), d.getDate()); if(nx<n) nx = new Date(n.getFullYear()+1, d.getMonth(), d.getDate());
+    const k = daysBetween(n, nx);
+    if(k===0) bday = `<div class="banner"><b>🎂 Hoje é o dia! 🎉</b></div>`;
+    else if(k<=60) bday = `<div class="banner">🎂 faltam<br><b>${k} ${k===1?'dia':'dias'}</b><br>para o aniversário dela</div>`;
+  }
+  $('#main').innerHTML = `${bday}
     ${pend.length?`<div class="card"><h2>💌 ${esc(S.cfg.par)} está pedindo</h2>${pend.map(x=>`
       <div class="req"><div class="ic">${c(x.k).e}</div><div class="tx"><b>${esc(c(x.k).t)}</b><span class="muted">${ago(x.t)}</span></div>
       <button class="btn" data-ok="${x.id}">Atendido 💗</button></div>`).join('')}</div>`:''}
+    <div class="card" style="text-align:center">
+      <h2>Quer um carinho?</h2>
+      <div class="chips" id="cc" style="justify-content:center">${CARINHOS.map(x=>`<button class="chip ${pickC===x.k?'on':''}" data-k="${x.k}">${x.e} ${x.t}</button>`).join('')}</div>
+      <div class="heart-wrap"><button class="big-heart" id="pedir">💗</button></div>
+      <div class="muted">toque no coração para pedir ${esc(c(pickC).t.toLowerCase())}</div>
+    </div>
+    <div class="card"><h2>Como você está hoje?</h2>
+      <div class="moods">${MOODS.map(([e,t])=>`<button class="mood ${my&&my.e===e?'on':''}" data-e="${e}">${e}<small>${t}</small></button>`).join('')}</div>
+      <div class="mood-line"><div><div class="e">${my?my.e:'➖'}</div><div class="muted">você</div></div>
+        <div><div class="e">${his?his.e:'➖'}</div><div class="muted">${esc(S.cfg.par)}${his&&his.txt?'<br>“'+esc(his.txt)+'”':''}</div></div></div>
+      <input id="mt" placeholder="Quer contar por quê? (opcional)" value="${esc(my?my.txt||'':'')}" style="margin-top:12px"></div>
     ${mine.length?`<div class="card"><h2>⏳ Aguardando</h2>${mine.map(x=>`
       <div class="req"><div class="ic">${c(x.k).e}</div><div class="tx"><b>${esc(c(x.k).t)}</b><span class="muted">pedido ${ago(x.t)}</span></div>
       <button class="x" data-del="${x.id}">✕</button></div>`).join('')}</div>`:''}
-    <div class="card"><h2>Carinhos dados 🥰 <span class="muted">(${S.carinhos.filter(x=>!x.del&&x.done).length} no total)</span></h2>
+    <div class="card"><h2>Carinhos dados 🥰 <span class="muted">(${live('carinhos').filter(x=>x.done).length} no total)</span></h2>
       ${done.length?done.map(x=>`<div class="req"><div class="ic">${c(x.k).e}</div><div class="tx"><b>${esc(c(x.k).t)}</b><span class="muted">${ago(x.doneAt||x.t)}</span></div></div>`).join(''):'<p class="muted">Ainda nenhum… bora começar!</p>'}
     </div>`;
-  $('#cc').querySelectorAll('button').forEach(b => b.onclick = () => { pickC=b.dataset.k; vCarinho(); });
-  $('#pedir').onclick = () => { S.carinhos.push({id:uid(), k:pickC, by:S.cfg.eu, t:now(), u:now()}); floaty('💗'); toast('Pedido enviado 💌'); commit(); };
-  document.querySelectorAll('[data-ok]').forEach(b => b.onclick = () => { const it=S.carinhos.find(x=>x.id===b.dataset.ok); it.done=true; it.doneAt=now(); it.u=now(); floaty('🥰'); commit(); });
+  document.querySelectorAll('.mood').forEach(b => b.onclick = () => {
+    const e = b.dataset.e, txt = $('#mt').value.trim(); const id = day+':'+S.cfg.eu;
+    const it = S.humores.find(x=>x.id===id);
+    if(it){ it.e=e; it.txt=txt; it.u=now(); it.del=false; } else S.humores.push({id, day, by:S.cfg.eu, e, txt, u:now()});
+    if(MOOD_ALERT.includes(e)) notify(S.cfg.nome+' está '+e, txt || 'Que tal mandar um carinho? 💗');
+    toast('Humor salvo '+e); commit();
+  });
+  $('#cc').querySelectorAll('button').forEach(b => b.onclick = () => { pickC=b.dataset.k; vHome(); });
+  $('#pedir').onclick = () => { S.carinhos.push({id:uid(), k:pickC, by:S.cfg.eu, t:now(), u:now()}); floaty('💗'); toast('Pedido enviado 💌');
+    notify(S.cfg.nome+' pediu '+c(pickC).t.toLowerCase()+' '+c(pickC).e, 'Toque para atender 💗'); commit(); };
+  document.querySelectorAll('[data-ok]').forEach(b => b.onclick = () => { const it=S.carinhos.find(x=>x.id===b.dataset.ok); it.done=true; it.doneAt=now(); it.u=now(); floaty('🥰'); confetti(1800);
+    notify('Pedido atendido 🥰', S.cfg.nome+' atendeu seu pedido de '+c(it.k).t.toLowerCase()); commit(); });
   document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { const it=S.carinhos.find(x=>x.id===b.dataset.del); it.del=true; it.u=now(); commit(); });
 }
 
 /* --- tarefas --- */
 function vTarefas(){
-  const list = S.tarefas.filter(x=>!x.del).sort((a,b)=> (a.done-b.done) || (b.t-a.t));
+  const list = live('tarefas').sort((a,b)=> (a.done-b.done) || (b.t-a.t));
   const row = x => `<div class="todo ${x.done?'done':''}"><button class="box" data-c="${x.id}">${x.done?'✓':''}</button>
     <div class="tx">${esc(x.txt)}<div class="muted">${x.by===S.cfg.eu?'pedido por você':'pedido por '+esc(S.cfg.par)} · ${ago(x.t)}</div></div>
     <button class="x" data-d="${x.id}">✕</button></div>`;
@@ -296,30 +463,42 @@ function vTarefas(){
       <p class="muted" style="margin:8px 0 0">Vale pra qualquer coisa de casa: consertar, comprar, lembrar…</p></div>
     <div class="card"><h2>A fazer (${open.length})</h2>${open.length?open.map(row).join(''):'<p class="muted">Tudo em dia! 🎉</p>'}</div>
     ${fin.length?`<div class="card"><h2>Feitos ✅</h2>${fin.map(row).join('')}</div>`:''}`;
-  const add = () => { const v=$('#tt').value.trim(); if(!v) return; S.tarefas.push({id:uid(), txt:v, by:S.cfg.eu, t:now(), u:now(), done:false}); commit(); };
+  const add = () => { const v=$('#tt').value.trim(); if(!v) return; S.tarefas.push({id:uid(), txt:v, by:S.cfg.eu, t:now(), u:now(), done:false});
+    notify('Favorzinho novo 📝', S.cfg.nome+': '+v); commit(); };
   $('#ta').onclick = add; $('#tt').onkeydown = e => { if(e.key==='Enter') add(); };
-  document.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const it=S.tarefas.find(x=>x.id===b.dataset.c); it.done=!it.done; it.u=now(); if(it.done) floaty('✨',4); commit(); });
+  document.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const it=S.tarefas.find(x=>x.id===b.dataset.c); it.done=!it.done; it.u=now();
+    if(it.done){ floaty('✨',4); if(it.by!==S.cfg.eu) notify('Feito! ✅', S.cfg.nome+' fez: '+it.txt); } commit(); });
   document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.tarefas.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
 }
 
-/* --- fotos --- */
-function resizeImage(file, max=900, q=.72){
+/* --- fotos (Supabase Storage quando disponível) --- */
+function resizeBlob(file, max=1100, q=.78){
   return new Promise((res, rej) => {
     const img = new Image(), url = URL.createObjectURL(file);
     img.onload = () => { const r = Math.min(1, max/Math.max(img.width,img.height)); const c=document.createElement('canvas');
       c.width=Math.round(img.width*r); c.height=Math.round(img.height*r); c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', q)); };
+      URL.revokeObjectURL(url); c.toBlob(b => b ? res({blob:b, data:c.toDataURL('image/jpeg', q)}) : rej(), 'image/jpeg', q); };
     img.onerror = rej; img.src = url;
   });
 }
+async function uploadPhoto(blob, id){
+  if(!remoteOn()) return null;
+  try{
+    const path = S.cfg.code+'/'+id+'.jpg';
+    const r = await fetch(BASE()+'/storage/v1/object/fotos/'+encodeURIComponent(S.cfg.code)+'/'+id+'.jpg',
+      {method:'POST', headers:{apikey:S.cfg.key, Authorization:'Bearer '+S.cfg.key, 'Content-Type':'image/jpeg', 'x-upsert':'true'}, body:blob});
+    if(!r.ok) return null;
+    return BASE()+'/storage/v1/object/public/fotos/'+encodeURIComponent(S.cfg.code)+'/'+id+'.jpg';
+  }catch(e){ return null; }
+}
 let heroSeed = 0;
 function vFotos(){
-  const list = S.fotos.filter(x=>!x.del).sort((a,b)=>b.t-a.t);
+  const list = live('fotos').filter(x=>x.img).sort((a,b)=>b.t-a.t);
   const day = Math.floor(now()/86400000);
   const hero = list.length ? list[(day + heroSeed) % list.length] : null;
   $('#main').innerHTML = `
     ${hero?`<div class="hero"><img src="${hero.img}"><p>✨ <b>Memória do dia</b><br><span class="muted">${esc(hero.cap||'')} · ${new Date(hero.t).toLocaleDateString('pt-BR')}</span></p>
-      <p style="padding-top:0"><button class="btn ghost" id="shuf">🎲 Outra foto</button></p></div>`:''}
+      <p style="padding-top:0"><button class="btn ghost sm" id="shuf">🎲 Outra foto</button></p></div>`:''}
     <div class="card"><h2>Como foi seu dia? 📷</h2>
       <input id="fc" placeholder="Legenda (opcional)" style="margin-bottom:10px">
       <input id="ff" type="file" accept="image/*" class="hide" multiple>
@@ -331,71 +510,177 @@ function vFotos(){
   $('#fa').onclick = () => $('#ff').click();
   if($('#shuf')) $('#shuf').onclick = () => { heroSeed += 1 + Math.floor(Math.random()*5); vFotos(); };
   $('#ff').onchange = async e => {
-    const cap = $('#fc').value.trim();
-    for(const f of e.target.files){ try{ const img = await resizeImage(f); S.fotos.push({id:uid(), img, cap, by:S.cfg.eu, t:now(), u:now()}); }catch(_){ toast('Não consegui ler essa foto'); } }
-    floaty('📸',4); commit();
+    const cap = $('#fc').value.trim(); let n = 0; toast('Enviando foto… 📸');
+    for(const f of e.target.files){
+      try{ const {blob, data} = await resizeBlob(f); const id = uid(); const url = await uploadPhoto(blob, id);
+        S.fotos.push({id, img:url||data, cap, by:S.cfg.eu, t:now(), u:now()}); n++; }catch(_){ toast('Não consegui ler essa foto'); }
+    }
+    if(n){ floaty('📸',4); notify('Foto nova 📸', S.cfg.nome+' postou '+(n>1?n+' fotos':'uma foto')+(cap?': '+cap:'')); }
+    commit();
   };
   document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.fotos.find(x=>x.id===b.dataset.d); it.del=true; it.img=''; it.u=now(); commit(); });
 }
 
 /* --- recados --- */
 function vRecados(){
-  S.seen.recados = now(); saveLocal();
-  const list = S.recados.filter(x=>!x.del).sort((a,b)=>a.t-b.t).slice(-60);
+  const list = live('recados').sort((a,b)=>a.t-b.t).slice(-60);
   $('#main').innerHTML = `
     <div class="card"><h2>Deixe um recadinho 💌</h2>
       <textarea id="rt" rows="3" placeholder="Escreva algo fofo…"></textarea>
       <div class="row" style="margin-top:10px"><button class="btn" id="ra">Enviar</button><button class="btn ghost" id="rf">✨ Sugestão</button></div></div>
     <div>${list.length?list.map(x=>`<div class="note ${x.by===S.cfg.eu?'me':'other'}">${esc(x.txt)}<small>${x.by===S.cfg.eu?'você':esc(S.cfg.par)} · ${ago(x.t)}</small></div>`).join(''):'<p class="muted" style="text-align:center">Nenhum recado ainda…</p>'}</div>`;
   $('#rf').onclick = () => { $('#rt').value = FRASES[Math.floor(Math.random()*FRASES.length)]; };
-  $('#ra').onclick = () => { const v=$('#rt').value.trim(); if(!v) return; S.recados.push({id:uid(), txt:v, by:S.cfg.eu, t:now(), u:now()}); floaty('💌',4); commit(); };
+  $('#ra').onclick = () => { const v=$('#rt').value.trim(); if(!v) return; S.recados.push({id:uid(), txt:v, by:S.cfg.eu, t:now(), u:now()}); floaty('💌',4);
+    notify('Recadinho de '+S.cfg.nome+' 💌', v.length>90?v.slice(0,90)+'…':v); commit(); };
 }
 
-/* --- nós (contador, datas, configurações) --- */
-function daysBetween(a,b){ return Math.floor((b-a)/86400000); }
+/* --- mais --- */
+function vMais(){
+  if(sub==='cupons') return vCupons();
+  if(sub==='desejos') return vDesejos();
+  if(sub==='capsula') return vCapsula();
+  if(sub==='nos') return vNos();
+  if(sub==='ajustes') return vAjustes();
+  const cup = live('cupons').filter(x=>x.by!==S.cfg.eu && !x.used).length;
+  const cap = live('capsulas').filter(x=>x.by!==S.cfg.eu && !x.opened && x.d<=dstr()).length;
+  $('#main').innerHTML = `<div class="menu">
+    <button data-s="cupons"><span class="e">🎟️</span>Cupons${cup?`<b class="badge">${cup}</b>`:''}</button>
+    <button data-s="desejos"><span class="e">💭</span>Desejos</button>
+    <button data-s="capsula"><span class="e">⏳</span>Cápsula do tempo${cap?`<b class="badge">${cap}</b>`:''}</button>
+    <button data-s="nos"><span class="e">🎂</span>Nós</button>
+    <button data-s="ajustes"><span class="e">⚙️</span>Ajustes</button></div>`;
+  document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { sub=b.dataset.s; render(); $('#main').scrollTop=0; });
+}
+const backBtn = `<button class="back" id="bk">← Voltar</button>`;
+const goBack = () => { $('#bk').onclick = () => { sub=null; render(); }; };
+
+function vCupons(){
+  const mineIn = live('cupons').filter(x=>x.by!==S.cfg.eu).sort((a,b)=>(a.used||0)-(b.used||0)||b.t-a.t);
+  const mineOut = live('cupons').filter(x=>x.by===S.cfg.eu).sort((a,b)=>b.t-a.t);
+  const cp = x => `<div class="coupon ${x.used?'used':''}"><div class="ic">${esc(x.e)}</div><div class="tx"><b>${esc(x.txt)}</b>
+    <small>${x.used?'usado em '+new Date(x.usedAt).toLocaleDateString('pt-BR'):'de '+(x.by===S.cfg.eu?'você':esc(S.cfg.par))}</small></div>
+    ${x.by!==S.cfg.eu && !x.used?`<button class="btn sm" data-u="${x.id}">Usar</button>`:''}
+    ${x.by===S.cfg.eu?`<button class="x" style="color:inherit" data-d="${x.id}">✕</button>`:''}</div>`;
+  $('#main').innerHTML = `${backBtn}
+    <div class="card"><h2>Dar um cupom 🎁</h2>
+      <div class="chips" id="cm">${CUPOM_MODELOS.map(([e,t],i)=>`<button class="chip" data-i="${i}">${e} ${t.replace('Vale ','')}</button>`).join('')}</div>
+      <div class="row" style="margin-top:12px"><input id="ce" value="🎁" style="max-width:64px;text-align:center"><input id="ct" placeholder="Vale…"></div>
+      <div style="margin-top:10px"><button class="btn" id="cadd">Dar cupom</button></div></div>
+    <h2 style="margin-top:18px">Para você 🎟️</h2>${mineIn.map(cp).join('')||'<p class="muted">Nenhum cupom ainda…</p>'}
+    <h2 style="margin-top:18px">Que você deu</h2>${mineOut.map(cp).join('')||'<p class="muted">Você ainda não deu nenhum.</p>'}`;
+  goBack();
+  $('#cm').querySelectorAll('button').forEach(b => b.onclick = () => { const m = CUPOM_MODELOS[+b.dataset.i]; $('#ce').value=m[0]; $('#ct').value=m[1]; });
+  $('#cadd').onclick = () => { const t=$('#ct').value.trim(), e=$('#ce').value.trim()||'🎁'; if(!t) return toast('Escreva o que o cupom vale');
+    S.cupons.push({id:uid(), e, txt:t, by:S.cfg.eu, t:now(), u:now(), used:false}); floaty('🎟️',5); notify('Você ganhou um cupom! 🎟️', t); commit(); };
+  document.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { const it=S.cupons.find(x=>x.id===b.dataset.u); it.used=true; it.usedAt=now(); it.u=now();
+    confetti(2200); notify('Cupom usado 🎟️', S.cfg.nome+' usou: '+it.txt); commit(); });
+  document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.cupons.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
+}
+
+let dcat = '🎁';
+function vDesejos(){
+  const list = live('desejos').sort((a,b)=>(a.done-b.done)||b.t-a.t);
+  const row = x => `<div class="todo ${x.done?'done':''}"><button class="box" data-c="${x.id}">${x.done?'✓':''}</button>
+    <div class="tx">${esc(x.e)} ${esc(x.txt)}<div class="muted">${x.by===S.cfg.eu?'você':esc(S.cfg.par)} · ${ago(x.t)}</div></div><button class="x" data-d="${x.id}">✕</button></div>`;
+  $('#main').innerHTML = `${backBtn}
+    <div class="card"><h2>Nossa lista de desejos 💭</h2>
+      <div class="chips" id="dc">${DESEJO_CATS.map(([e,t])=>`<button class="chip ${dcat===e?'on':''}" data-e="${e}">${e} ${t}</button>`).join('')}</div>
+      <div class="row" style="margin-top:12px"><input id="dt" placeholder="ex: jantar naquele restaurante novo"><button class="btn" id="da">+</button></div></div>
+    <div class="card">${list.map(row).join('')||'<p class="muted">Anote presentes, rolês, viagens e sonhos. Quando realizar, é só marcar ✨</p>'}</div>`;
+  goBack();
+  $('#dc').querySelectorAll('button').forEach(b => b.onclick = () => { dcat=b.dataset.e; vDesejos(); });
+  const add = () => { const v=$('#dt').value.trim(); if(!v) return; S.desejos.push({id:uid(), e:dcat, txt:v, by:S.cfg.eu, t:now(), u:now(), done:false});
+    notify('Desejo novo '+dcat, S.cfg.nome+': '+v); commit(); };
+  $('#da').onclick = add; $('#dt').onkeydown = e => { if(e.key==='Enter') add(); };
+  document.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const it=S.desejos.find(x=>x.id===b.dataset.c); it.done=!it.done; it.u=now(); if(it.done){ floaty('✨',5); confetti(1600);} commit(); });
+  document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.desejos.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
+}
+
+function vCapsula(){
+  const td = dstr();
+  const list = live('capsulas').sort((a,b)=>a.d.localeCompare(b.d));
+  const row = x => {
+    const mine = x.by===S.cfg.eu, ready = x.d<=td, k = daysBetween(todayMidnight(), parseD(x.d));
+    if(mine) return `<div class="capsule ${ready?'':'locked'}"><div class="ic">${x.opened?'💌':ready?'🎁':'🔒'}</div><div class="tx" style="flex:1"><b>Para ${esc(S.cfg.par)}</b>
+      <div class="muted">${ready?(x.opened?'já foi aberta':'já pode ser aberta'):'abre em '+fmtD(x.d)+' ('+k+' dias)'}</div><div style="margin-top:4px">“${esc(x.txt)}”</div></div><button class="x" data-d="${x.id}">✕</button></div>`;
+    if(!ready) return `<div class="capsule locked"><div class="ic">🔒</div><div class="tx" style="flex:1"><b>Cápsula de ${esc(S.cfg.par)}</b><div class="muted">abre em ${fmtD(x.d)} (${k} ${k===1?'dia':'dias'})</div></div></div>`;
+    if(!x.opened) return `<div class="capsule"><div class="ic">🎁</div><div class="tx" style="flex:1"><b>Cápsula de ${esc(S.cfg.par)}</b><div class="muted">chegou o dia!</div></div><button class="btn sm" data-o="${x.id}">Abrir</button></div>`;
+    return `<div class="capsule"><div class="ic">💌</div><div class="tx" style="flex:1"><b>De ${esc(S.cfg.par)}</b><div>“${esc(x.txt)}”</div><div class="muted">escrita em ${new Date(x.t).toLocaleDateString('pt-BR')}</div></div></div>`;
+  };
+  const min = dstr(new Date(now()+86400000));
+  $('#main').innerHTML = `${backBtn}
+    <div class="card"><h2>Escrever pra abrir no futuro ⏳</h2>
+      <p class="muted" style="margin-top:0">${esc(S.cfg.par)} só consegue ler quando chegar a data escolhida.</p>
+      <textarea id="ct" rows="3" placeholder="Uma mensagem pro futuro…"></textarea>
+      <label class="l">Abre em</label><input id="cd" type="date" min="${min}">
+      <div style="margin-top:12px"><button class="btn" id="cadd">Trancar cápsula 🔒</button></div></div>
+    <div class="card">${list.map(row).join('')||'<p class="muted">Nenhuma cápsula ainda.</p>'}</div>`;
+  goBack();
+  $('#cadd').onclick = () => { const t=$('#ct').value.trim(), d=$('#cd').value; if(!t||!d) return toast('Escreva a mensagem e escolha a data');
+    S.capsulas.push({id:uid(), txt:t, d, by:S.cfg.eu, t:now(), u:now(), opened:false}); floaty('🔒',4); notify('Cápsula do tempo 🔒', S.cfg.nome+' guardou uma mensagem que abre em '+fmtD(d)); commit(); };
+  document.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { const it=S.capsulas.find(x=>x.id===b.dataset.o); it.opened=true; it.openedAt=now(); it.u=now(); confetti(2600); floaty('💌',6);
+    notify('Cápsula aberta 💌', S.cfg.nome+' abriu sua cápsula do tempo'); commit(); });
+  document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.capsulas.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
+}
+
 function nextOccur(dateStr){
-  const d = new Date(dateStr+'T00:00:00'); const n = new Date(); n.setHours(0,0,0,0);
+  const d = parseD(dateStr), n = todayMidnight();
   let x = new Date(n.getFullYear(), d.getMonth(), d.getDate()); if(x<n) x = new Date(n.getFullYear()+1, d.getMonth(), d.getDate());
   return x;
 }
-function vJuntos(){
-  const ini = S.cfg.inicio ? new Date(S.cfg.inicio+'T00:00:00') : null;
+function vNos(){
+  const ini = S.cfg.inicio ? parseD(S.cfg.inicio) : null;
   const dias = ini ? daysBetween(ini, new Date()) : null;
-  const datas = S.datas.filter(x=>!x.del).map(x=>({...x, nx:nextOccur(x.d)})).sort((a,b)=>a.nx-b.nx);
-  const faltam = d => { const n=new Date(); n.setHours(0,0,0,0); const k=daysBetween(n,d.nx); return k===0?'É hoje! 🎉':`faltam ${k} dias`; };
-  $('#main').innerHTML = `
+  const datas = live('datas').map(x=>({...x, nx:nextOccur(x.d)})).sort((a,b)=>a.nx-b.nx);
+  const faltam = d => { const k=daysBetween(todayMidnight(),d.nx); return k===0?'É hoje! 🎉':`faltam ${k} dias`; };
+  $('#main').innerHTML = `${backBtn}
     <div class="card count">${dias!==null?`<div class="n">${dias}</div><div>dias juntos 💞</div>
-      <div class="muted">${Math.floor(dias/365)} anos e ${Math.floor((dias%365)/30)} meses</div>`:'<p class="muted">Defina a data de vocês em Configurações abaixo.</p>'}</div>
+      <div class="muted">${Math.floor(dias/365)} anos e ${Math.floor((dias%365)/30)} meses</div>`:'<p class="muted">Defina a data de vocês em Ajustes.</p>'}</div>
     <div class="card"><h2>Datas especiais 🎈</h2>
       ${datas.map(x=>`<div class="req"><div class="ic">${esc(x.e||'🎉')}</div><div class="tx"><b>${esc(x.n)}</b><span class="muted">${faltam(x)} · ${x.nx.toLocaleDateString('pt-BR')}</span></div><button class="x" data-d="${x.id}">✕</button></div>`).join('')||'<p class="muted">Adicione aniversários, viagens, primeiro beijo…</p>'}
-      <div class="row" style="margin-top:12px"><input id="dn" placeholder="Nome (ex: Aniversário dela)"><input id="dd" type="date" style="max-width:150px"></div>
-      <div style="margin-top:8px"><button class="btn" id="da">Adicionar</button></div></div>
+      <div class="row" style="margin-top:12px"><input id="dn" placeholder="Nome (ex: Primeiro beijo)"><input id="dd" type="date" style="max-width:150px"></div>
+      <div style="margin-top:8px"><button class="btn" id="da">Adicionar</button></div></div>`;
+  goBack();
+  $('#da').onclick = () => { const n=$('#dn').value.trim(), d=$('#dd').value; if(!n||!d) return toast('Preencha nome e data'); S.datas.push({id:uid(), n, d, e:'🎉', u:now()}); commit(); };
+  document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.datas.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
+}
+
+function vAjustes(){
+  $('#main').innerHTML = `${backBtn}
     <div class="card"><h2>Tema do dia 🎨</h2>
       <div class="chips" id="th">
         <button class="chip ${S.cfg.tema==='rosa'?'on':''}" data-t="rosa">🌸 Rosinha e fofo</button>
         <button class="chip ${S.cfg.tema==='vintage'?'on':''}" data-t="vintage">📖 Aconchegante</button>
         <button class="chip ${S.cfg.tema==='minimal'?'on':''}" data-t="minimal">🤍 Minimalista</button>
       </div><p class="muted">O tema vale para os dois celulares.</p></div>
+    <div class="card"><h2>Carta de abertura 💌</h2>
+      <p class="muted" style="margin-top:0">Ela vê essa carta, com um envelope animado, na próxima vez que abrir o app (e de novo no aniversário se você trocar o texto).</p>
+      <textarea id="cta" rows="7" placeholder="Escreva aqui a mensagem de aniversário…">${esc(S.cfg.carta)}</textarea>
+      <div class="row" style="margin-top:10px"><button class="btn" id="cts">Salvar carta</button><button class="btn ghost" id="ctp">👀 Ver como ela vê</button></div></div>
     <div class="card"><h2>Configurações ⚙️</h2>
       <label class="l">Data que começaram</label><input id="ci" type="date" value="${esc(S.cfg.inicio)}">
+      <label class="l">Aniversário dela</label><input id="cb" type="date" value="${esc(S.cfg.niver)}">
       <label class="l">Seu nome</label><input id="cn" value="${esc(S.cfg.nome)}">
       <label class="l">Nome do seu amor</label><input id="cp" value="${esc(S.cfg.par)}">
       <label class="l">Código secreto</label><input id="cc2" value="${esc(S.cfg.code)}">
       <label class="l">Supabase URL</label><input id="cu" value="${esc(S.cfg.url)}">
       <label class="l">Supabase chave anon</label><input id="ck" value="${esc(S.cfg.key)}">
       <div style="margin-top:12px"><button class="btn" id="cs">Salvar</button></div></div>`;
+  goBack();
   $('#th').querySelectorAll('button').forEach(b => b.onclick = () => { S.cfg.tema=b.dataset.t; S.cfg.u=now(); applyTheme(); commit(); });
-  $('#da').onclick = () => { const n=$('#dn').value.trim(), d=$('#dd').value; if(!n||!d) return toast('Preencha nome e data'); S.datas.push({id:uid(), n, d, e:'🎉', u:now()}); commit(); };
-  document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.datas.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
-  $('#cs').onclick = () => { S.cfg.inicio=$('#ci').value; S.cfg.nome=$('#cn').value.trim()||S.cfg.nome; S.cfg.par=$('#cp').value.trim()||S.cfg.par;
-    S.cfg.code=$('#cc2').value.trim(); S.cfg.url=$('#cu').value.trim(); S.cfg.key=$('#ck').value.trim(); S.cfg.u=now(); toast('Salvo 💾'); commit(); };
+  $('#cts').onclick = () => { S.cfg.carta=$('#cta').value.trim(); S.cfg.cartaV=now(); S.cfg.u=now(); S.seen.carta = S.cfg.eu==='ele' ? S.cfg.cartaV : 0; toast('Carta salva 💌'); commit(); };
+  $('#ctp').onclick = () => { if(!$('#cta').value.trim()) return toast('Escreva a carta primeiro'); const keep=S.cfg.carta; S.cfg.carta=$('#cta').value.trim(); openLetter(true); S.cfg.carta=keep; };
+  $('#cs').onclick = () => { S.cfg.inicio=$('#ci').value; S.cfg.niver=$('#cb').value; S.cfg.nome=$('#cn').value.trim()||S.cfg.nome; S.cfg.par=$('#cp').value.trim()||S.cfg.par;
+    S.cfg.code=$('#cc2').value.trim(); S.cfg.url=$('#cu').value.trim(); S.cfg.key=$('#ck').value.trim(); S.cfg.u=now(); toast('Salvo 💾'); commit(); initPush(); };
 }
 
 /* ============ início ============ */
 loadLocal(); applyTheme(); render();
-syncNow();
-setInterval(() => { if(!document.hidden) syncNow(); }, 8000);
-document.addEventListener('visibilitychange', () => { if(!document.hidden) syncNow(); });
+setTimeout(()=>$('#splash').classList.add('out'), 1300);
+setTimeout(()=>{ if(S.cfg.eu) birthdayFlow(); }, 1900);
+syncNow().then(()=>{ if(S.cfg.eu) initPush(); });
+setInterval(() => { if(!document.hidden) syncNow(true); }, 8000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) syncNow(true); });
 </script>
 </body>
 </html>

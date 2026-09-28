@@ -1,17 +1,16 @@
 {
   "name": "nosso-cantinho",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Nosso cantinho - app so nosso",
-  "scripts": {
-    "sync": "cap sync android",
-    "serve": "npx serve www -l 5173"
-  },
+  "scripts": { "sync": "cap sync android", "serve": "npx serve www -l 5173" },
   "dependencies": {
     "@capacitor/android": "^7.0.0",
-    "@capacitor/core": "^7.0.0"
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/push-notifications": "^7.0.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^7.0.0"
   }
 }
