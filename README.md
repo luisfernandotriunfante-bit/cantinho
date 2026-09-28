@@ -1,4 +1,4 @@
-# Nosso Cantinho 💗 (versão 2)
+# Nosso Cantinho 💗 (versão 3)
 
 Abas: Início (carinho + humor do dia), Afazeres, Fotos, Recados, Mais (cupons, desejos, cápsula do tempo, Nós, Ajustes).
 
@@ -29,3 +29,18 @@ Depois de subir o google-services.json: Settings > Danger Zone > Change visibili
 
 ## Testar no computador
 `npm run serve` e abra http://localhost:5173
+
+## Como testar sozinho (sem instalar no celular dela)
+- Seu celular = "Ele" (APK instalado).
+- Seu computador = "Ela": abra o `www/index.html` no Chrome e escolha "Ela".
+- Nos dois: mesmo Supabase e um código de teste (ex.: `teste-luis`).
+- Para o presente de verdade, use um código secreto NOVO: ela começa do zero.
+- Push só chega no celular (o Chrome do computador não recebe).
+
+## Aba Toque (tempo real)
+Usa o Realtime do Supabase (já vem ligado, não precisa configurar). Mão na mão, batimento, beijinho e cafuné aparecem na hora
+quando os dois estão com o app aberto. Se o outro não estiver, o app manda uma notificação push.
+
+## Só nós dois 🌙
+Mais > Só nós dois. Pede um PIN de 4 números (fica só no celular). Cupons, quiz e desafios dessa área ficam separados dos normais
+e os avisos nunca mostram o conteúdo.
