@@ -397,21 +397,20 @@ function birthdayFlow(){
 }
 
 /* ============ navegação ============ */
-const TABS = [['home','💗','Início'],['tarefas','📝','Afazeres'],['toque','🤝','Toque'],['fotos','📸','Fotos'],['recados','💌','Recados'],['mais','✨','Mais']];
+const TABS = [['home','💗','Início'],['tarefas','📝','Afazeres'],['fotos','📸','Fotos'],['recados','💌','Recados'],['mais','✨','Mais']];
 let renderedKey = '';
 function renderNav(){
   const c = counts();
   const badge = {home:c.pend, tarefas:c.tasks, recados:live('recados').filter(x=>x.by!==S.cfg.eu&&x.t>(S.seen.recados||0)).length, mais:c.cup};
   $('#nav').innerHTML = TABS.map(([k,e,t]) =>
-    k==='toque' ? `<button class="mid ${tab===k?'on':''}" data-t="${k}"><div class="pill">${e}</div><span>${t}</span></button>`
-    : `<button class="${tab===k?'on':''}" data-t="${k}">${e}<span>${t}${badge[k]?`<b class="badge">${badge[k]}</b>`:''}</span></button>`).join('');
+    `<button class="${tab===k?'on':''}" data-t="${k}">${e}<span>${t}${badge[k]?`<b class="badge">${badge[k]}</b>`:''}</span></button>`).join('');
   $('#nav').querySelectorAll('button').forEach(b => b.onclick = () => { tab=b.dataset.t; sub=null; render(); $('#main').scrollTop=0; });
 }
 function render(keepScroll){
   if(!S.cfg.eu){ return renderSetup(); }
   const main = $('#main'), y = main.scrollTop;
   const active = document.activeElement;
-  if(keepScroll && active && /INPUT|TEXTAREA|SELECT/.test(active.tagName)) { renderNav(); return; }
+  if(keepScroll && ((active && /INPUT|TEXTAREA|SELECT/.test(active.tagName)) || holdMe || beatOn)) { renderNav(); return; }
   renderNav();
   $('#sub').textContent = 'Oi, ' + S.cfg.nome + '!';
   const key = tab+'/'+sub;
@@ -419,7 +418,7 @@ function render(keepScroll){
   if(tab==='recados'){ S.seen.recados = now(); saveLocal(); }
   const isHot = tab==='mais' && sub && sub.startsWith('hot'); if(!isHot) hotUnlocked=false;
   document.documentElement.toggleAttribute('data-hot', !!isHot); applyTheme();
-  ({home:vHome, tarefas:vTarefas, toque:vToque, fotos:vFotos, recados:vRecados, mais:vMais}[tab])();
+  ({home:vHome, tarefas:vTarefas, fotos:vFotos, recados:vRecados, mais:vMais}[tab])();
   main.classList.remove('in'); if(anim){ void main.offsetWidth; main.classList.add('in'); }
   if(keepScroll && !anim) main.scrollTop = y;
 }
@@ -482,6 +481,7 @@ function vHome(){
       <div class="heart-wrap"><button class="big-heart" id="pedir">💗</button></div>
       <div class="muted">toque no coração para pedir ${esc(c(pickC).t.toLowerCase())}</div>
     </div>
+    ${toqueHtml()}
     <div class="card"><h2>Como você está hoje?</h2>
       <div class="moods">${MOODS.map(([e,t])=>`<button class="mood ${my&&my.e===e?'on':''}" data-e="${e}">${e}<small>${t}</small></button>`).join('')}</div>
       <div class="mood-line"><div><div class="e">${my?my.e:'➖'}</div><div class="muted">você</div></div>
@@ -493,6 +493,7 @@ function vHome(){
     <div class="card"><h2>Carinhos dados 🥰 <span class="muted">(${live('carinhos').filter(x=>x.done).length} no total)</span></h2>
       ${done.length?done.map(x=>`<div class="req"><div class="ic">${c(x.k).e}</div><div class="tx"><b>${esc(c(x.k).t)}</b><span class="muted">${ago(x.doneAt||x.t)}</span></div></div>`).join(''):'<p class="muted">Ainda nenhum… bora começar!</p>'}
     </div>`;
+  toqueBind();
   document.querySelectorAll('.mood').forEach(b => b.onclick = () => {
     const e = b.dataset.e, txt = $('#mt').value.trim(); const id = day+':'+S.cfg.eu;
     const it = S.humores.find(x=>x.id===id);
@@ -780,15 +781,15 @@ function onRt(ev, p){
   hisSeen = now();
   const par = S.cfg.par;
   if(ev==='sync'){ setTimeout(()=>syncNow(true), 250); }
-  else if(ev==='here'){ if(tab==='toque') refreshToque(); if(!p.re) rtSend('here',{re:1}); }
+  else if(ev==='here'){ if(tab==='home' && !sub) refreshToque(); if(!p.re) rtSend('here',{re:1}); }
   else if(ev==='hold'){
     holdHim = !!p.on; holdHimAt = now();
-    if(p.on && tab!=='toque') banner('🤝 '+par+' quer segurar sua mão', ()=>{ tab='toque'; sub=null; render(); });
+    if(p.on && tab!=='home') banner('🤝 '+par+' quer segurar sua mão', ()=>{ tab='home'; sub=null; render(); });
     refreshHold();
   }
-  else if(ev==='beat'){ haptic(HEART); if(tab==='toque'){ const e=$('#pulse'); if(e){ e.textContent='💓'; e.style.transform='scale(1.25)'; setTimeout(()=>e.style.transform='',260);} } else toast('💓 '+par+' está pensando em você'); }
+  else if(ev==='beat'){ haptic(HEART); if(tab==='home'){ const e=$('#pulse'); if(e){ e.textContent='💓'; e.style.transform='scale(1.25)'; setTimeout(()=>e.style.transform='',260);} } else toast('💓 '+par+' está pensando em você'); }
   else if(ev==='kiss'){ haptic([40,70,40,70,90]); floaty('💋',7); toast('😘 '+par+' mandou um beijinho'); }
-  else if(ev==='cafune'){ haptic(14); if(tab==='toque') floaty('✨',1); }
+  else if(ev==='cafune'){ haptic(14); if(tab==='home') floaty('✨',1); }
 }
 function refreshHold(){
   const both = holdMe && holdHim;
@@ -797,36 +798,34 @@ function refreshHold(){
   if(both){ if(!holdTimer){ haptic(HEART); holdTimer=setInterval(()=>haptic(HEART),1100); } } else if(holdTimer){ clearInterval(holdTimer); holdTimer=null; }
 }
 let tk=0;
-setInterval(()=>{ tk++; if(holdHim && now()-holdHimAt>2600){ holdHim=false; refreshHold(); } if(holdMe) rtSend('hold',{on:true}); if(tab==='toque'){ refreshToque(); if(tk%3===0) rtSend('here',{}); } }, 1000);
+setInterval(()=>{ tk++; if(holdHim && now()-holdHimAt>2600){ holdHim=false; refreshHold(); } if(holdMe) rtSend('hold',{on:true}); if(tab==='home'){ refreshToque(); if(tk%3===0) rtSend('here',{}); } }, 1000);
 function refreshToque(){ const o=$('#onl'); if(o){ o.className='online'+(hisOnline()?' on':''); const t=$('#onlt'); if(t) t.textContent = hisOnline()? S.cfg.par+' está aqui agora' : S.cfg.par+' não está no app agora'; } }
 
-function vToque(){
+function toqueHtml(){
   const par = esc(S.cfg.par);
-  $('#main').innerHTML = `
-    <div class="card stage" style="text-align:center">
+  return `<div class="card stage" style="text-align:center">
+      <h2>🤝 Sentir de perto</h2>
       <div class="muted"><span id="onl" class="online"></span><span id="onlt"></span></div>
-      <h2 style="margin-top:8px">🤝 Mão na mão</h2>
-      <button class="hold" id="hold">🤝</button>
+      <button class="hold" id="hold" style="width:160px;height:160px;font-size:58px">🤝</button>
       <div class="muted" id="holdst" style="min-height:38px"></div>
-    </div>
-    <div class="card stage" style="text-align:center"><h2>💓 Batimento</h2>
-      <div id="pulse" style="font-size:54px;transition:transform .25s">💗</div>
-      <button class="btn tbtn" id="beat">Segure para enviar meu coração</button></div>
-    <div class="card stage" style="text-align:center"><h2>😘 Beijinho</h2>
-      <button class="btn tbtn" id="kiss">Mandar um beijinho</button></div>
-    <div class="card stage"><h2>🪶 Cafuné</h2>
-      <div class="pad" id="pad">deslize o dedo aqui devagarinho<br>${par} sente no celular</div></div>`;
+      <div class="row" style="margin-top:10px"><button class="btn tbtn" id="beat" style="padding:13px 8px;font-size:14px"><span id="pulse" style="transition:transform .25s;display:inline-block">💗</span> Batimento</button>
+        <button class="btn tbtn" id="kiss" style="padding:13px 8px;font-size:14px">😘 Beijinho</button></div>
+      <div class="pad" id="pad" style="height:84px;margin-top:12px">🪶 cafuné: deslize o dedo aqui<br>${par} sente no celular</div>
+    </div>`;
+}
+let beatOn=false;
+function toqueBind(){
   refreshToque(); refreshHold();
-  const H_ = $('#hold');
+  const H_ = $('#hold'); if(!H_) return;
   const down = e => { e.preventDefault(); if(holdMe) return; holdMe=true; haptic(25); rtSend('hold',{on:true}); refreshHold();
     if(!hisOnline()) pushOnce('hold', S.cfg.nome+' quer segurar sua mão 🤝', 'Abra o app e segure o círculo também'); };
   const up = e => { if(!holdMe) return; holdMe=false; rtSend('hold',{on:false}); refreshHold(); };
   H_.addEventListener('pointerdown', down); ['pointerup','pointercancel','pointerleave'].forEach(t=>H_.addEventListener(t, up));
   H_.addEventListener('contextmenu', e=>e.preventDefault());
   let bt=null; const B=$('#beat');
-  const bdown = e => { e.preventDefault(); const go=()=>{ haptic(HEART); const p=$('#pulse'); if(p){ p.style.transform='scale(1.25)'; setTimeout(()=>p.style.transform='',260);} rtSend('beat',{}); };
+  const bdown = e => { e.preventDefault(); beatOn=true; const go=()=>{ haptic(HEART); const p=$('#pulse'); if(p){ p.style.transform='scale(1.5)'; setTimeout(()=>p.style.transform='',260);} rtSend('beat',{}); };
     go(); bt=setInterval(go,900); if(!hisOnline()) pushOnce('beat', S.cfg.nome+' está pensando em você 💓', 'Abra o app'); };
-  const bup = () => { clearInterval(bt); bt=null; };
+  const bup = () => { clearInterval(bt); bt=null; beatOn=false; };
   B.addEventListener('pointerdown', bdown); ['pointerup','pointercancel','pointerleave'].forEach(t=>B.addEventListener(t,bup)); B.addEventListener('contextmenu',e=>e.preventDefault());
   $('#kiss').onclick = () => { haptic([40,70,40]); floaty('💋',5); if(!rtSend('kiss',{}) || !hisOnline()) pushOnce('kiss', S.cfg.nome+' mandou um beijinho 😘', 'Abra o app pra retribuir', 8000); };
   let lastC=0; const pad=$('#pad');
