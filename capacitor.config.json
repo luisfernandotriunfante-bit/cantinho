@@ -1,0 +1,6 @@
+{
+  "appId": "com.nosso.cantinho",
+  "appName": "Nosso Cantinho",
+  "webDir": "www",
+  "android": { "allowMixedContent": false }
+}
