@@ -18,10 +18,10 @@ jobs:
       - run: npm install
       - name: Chave de assinatura fixa (para o app atualizar por cima)
         env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_B64: ${{ secrets.X1 }}
         run: |
           if [ -z "$KEYSTORE_B64" ]; then
-            echo "::error title=CHAVE::SEGREDO_AUSENTE - o segredo KEYSTORE_B64 nao existe (ou esta vazio) em Repository secrets"
+            echo "::error title=CHAVE::SEGREDO_AUSENTE - o segredo X1 nao existe (ou esta vazio) em Repository secrets"
             exit 1
           fi
           echo "Tamanho do segredo: ${#KEYSTORE_B64} caracteres"
