@@ -16,6 +16,17 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 21 }
       - run: npm install
+      - name: Chave de assinatura fixa (para o app atualizar por cima)
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            mkdir -p ~/.android
+            echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+            echo "Chave fixa instalada."
+          else
+            echo "ATENCAO: segredo KEYSTORE_B64 ausente. A assinatura vai mudar a cada build."
+          fi
       - run: npx cap add android
       - name: Firebase (notificacoes push)
         run: |
@@ -27,6 +38,8 @@ jobs:
       - name: Compilar APK
         working-directory: android
         run: ./gradlew assembleDebug
+      - name: Impressao digital da assinatura (deve ser igual em todo build)
+        run: keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk | grep -E "SHA256|SHA-256" || true
       - uses: actions/upload-artifact@v4
         with:
           name: nosso-cantinho-apk
