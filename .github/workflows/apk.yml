@@ -20,14 +20,21 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
-          if [ -n "$KEYSTORE_B64" ]; then
-            mkdir -p ~/.android
-            echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
-            echo "Chave fixa instalada."
-          else
-            echo "ERRO: segredo KEYSTORE_B64 ausente. Cadastre em Settings > Secrets and variables > Actions."
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error title=CHAVE::SEGREDO_AUSENTE - o segredo KEYSTORE_B64 nao existe (ou esta vazio) em Repository secrets"
             exit 1
           fi
+          echo "Tamanho do segredo: ${#KEYSTORE_B64} caracteres"
+          mkdir -p ~/.android
+          if ! printf '%s' "$KEYSTORE_B64" | tr -d ' \r\n' | base64 -d > ~/.android/debug.keystore 2>/dev/null; then
+            echo "::error title=CHAVE::DECODE_FALHOU - o texto colado nao e base64 valido (tamanho ${#KEYSTORE_B64})"
+            exit 1
+          fi
+          if ! keytool -list -keystore ~/.android/debug.keystore -storepass android >/dev/null 2>&1; then
+            echo "::error title=CHAVE::KEYSTORE_INVALIDO - o texto colado esta incompleto ou alterado (tamanho ${#KEYSTORE_B64}, esperado 3576)"
+            exit 1
+          fi
+          echo "Chave fixa instalada."
       - run: npx cap add android
       - name: Firebase (notificacoes push)
         run: |
