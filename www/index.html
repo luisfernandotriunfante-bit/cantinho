@@ -740,6 +740,7 @@ function vAjustes(){
       <p class="muted" style="margin-top:0">Ela vê essa carta, com um envelope animado, na próxima vez que abrir o app (e de novo no aniversário se você trocar o texto).</p>
       <textarea id="cta" rows="7" placeholder="Escreva aqui a mensagem de aniversário…">${esc(S.cfg.carta)}</textarea>
       <div class="row" style="margin-top:10px"><button class="btn" id="cts">Salvar carta</button><button class="btn ghost" id="ctp">👀 Ver como ela vê</button></div></div>
+    ${updCard()}
     <div class="card"><h2>Configurações ⚙️</h2>
       <label class="l">Data que começaram</label><input id="ci" type="date" value="${esc(S.cfg.inicio)}">
       <label class="l">Aniversário dela</label><input id="cb" type="date" value="${esc(S.cfg.niver)}">
@@ -749,7 +750,7 @@ function vAjustes(){
       <label class="l">Supabase URL</label><input id="cu" value="${esc(S.cfg.url)}">
       <label class="l">Supabase chave anon</label><input id="ck" value="${esc(S.cfg.key)}">
       <div style="margin-top:12px"><button class="btn" id="cs">Salvar</button></div></div>`;
-  goBack();
+  goBack(); updBind();
   $('#th').querySelectorAll('button').forEach(b => b.onclick = () => { S.cfg.tema=b.dataset.t; S.cfg.u=now(); applyTheme(); commit(); });
   $('#cts').onclick = () => { S.cfg.carta=$('#cta').value.trim(); S.cfg.cartaV=now(); S.cfg.u=now(); S.seen.carta = S.cfg.eu==='ele' ? S.cfg.cartaV : 0; toast('Carta salva 💌'); commit(); };
   $('#ctp').onclick = () => { if(!$('#cta').value.trim()) return toast('Escreva a carta primeiro'); const keep=S.cfg.carta; S.cfg.carta=$('#cta').value.trim(); openLetter(true); S.cfg.carta=keep; };
@@ -1252,6 +1253,60 @@ function vHot(){
       <button data-s="hot-dados"><span class="e">🎲</span>Dados do amor</button></div>`;
   goBackTo(); document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { sub=b.dataset.s; render(); });
 }
+
+/* ============ atualização do app ============ */
+const REPO='luisfernandotriunfante-bit/cantinho';
+const capP = n => (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins[n]) || null;
+const isNative = () => !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+let UPD = {cur:null, ver:'', latest:null, url:'', busy:false, msg:''};
+async function curBuild(){
+  if(UPD.cur!=null) return UPD.cur;
+  try{ const a=capP('App'); if(a){ const i=await a.getInfo(); UPD.cur=parseInt(i.build,10)||0; UPD.ver=i.version||''; } }catch(e){}
+  return UPD.cur;
+}
+async function checkUpdate(manual){
+  if(UPD.busy) return null;
+  const cur = await curBuild();
+  if(cur==null){ if(manual) toast('A atualização só funciona no app instalado 📱'); return null; }
+  try{
+    const r = await fetch('https://api.github.com/repos/'+REPO+'/releases/latest', {headers:{Accept:'application/vnd.github+json'}});
+    if(!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    const n = parseInt(String(j.tag_name||'').replace(/\D/g,''),10)||0;
+    const a = (j.assets||[]).find(x=>/\.apk$/i.test(x.name));
+    UPD.latest = n; UPD.url = a ? a.browser_download_url : '';
+    try{ localStorage.setItem('nc_upd_at', String(now())); }catch(e){}
+    if(n>cur && UPD.url){
+      UPD.msg='🆕 Versão '+n+' disponível (você está na '+cur+')';
+      if(!manual) banner('🆕 Atualização disponível! Toque para instalar', ()=>{ tab='mais'; sub='ajustes'; render(); });
+    } else { UPD.msg='✅ Você já está na versão mais nova ('+cur+')'; }
+    if(manual){ if(tab==='mais' && sub==='ajustes') render(); }
+    return n>cur;
+  }catch(e){ UPD.msg='Não consegui verificar agora. Confira a internet 📡'; if(manual){ toast(UPD.msg); if(tab==='mais'&&sub==='ajustes') render(); } return null; }
+}
+async function doInstall(){
+  const P = capP('ApkInstaller'); if(!P || !UPD.url) return toast('Nada para instalar');
+  const st = t => { const e=$('#updst'); if(e) e.textContent=t; UPD.msg=t; };
+  try{
+    const c = await P.canInstall();
+    if(!c.allowed){ st('Libere "Instalar apps desconhecidos" para o Nosso Cantinho e volte aqui 🔓'); await P.openSettings(); return; }
+    UPD.busy=true; st('Baixando… 0%');
+    try{ await P.addListener('progress', e=>{ const p=e.percent|0; st('Baixando… '+p+'%'); const b=$('#updbar'); if(b) b.style.width=p+'%'; }); }catch(e){}
+    await P.install({url:UPD.url});
+    st('Abrindo o instalador… toque em "Atualizar" 💗');
+  }catch(e){ st('Falhou: '+(e&&e.message||e)); }
+  UPD.busy=false;
+}
+function updCard(){
+  const has = UPD.latest!=null && UPD.cur!=null && UPD.latest>UPD.cur && UPD.url;
+  return `<div class="card"><h2>Atualização do app 🔄</h2>
+    <p class="muted" style="margin-top:0">${isNative()?('Versão instalada: '+esc(UPD.ver||'?')+(UPD.cur?' (build '+UPD.cur+')':'')):'Disponível só no app instalado.'}</p>
+    <p id="updst" style="margin:8px 0">${esc(UPD.msg||'')}</p>
+    <div style="height:6px;border-radius:6px;background:rgba(0,0,0,.08);overflow:hidden;margin:8px 0"><div id="updbar" style="height:100%;width:0;background:var(--pri,#ff7eb3);transition:width .2s"></div></div>
+    <div class="row"><button class="btn ghost" id="updck">Procurar atualização</button>${has?'<button class="btn" id="updgo">Baixar e instalar</button>':''}</div></div>`;
+}
+function updBind(){ if(isNative() && UPD.cur==null) curBuild().then(()=>{ if(tab==='mais' && sub==='ajustes') render(); }); $('#updck').onclick=()=>checkUpdate(true); const g=$('#updgo'); if(g) g.onclick=doInstall; }
+setTimeout(async()=>{ if(!isNative()) return; let last=0; try{ last=+localStorage.getItem('nc_upd_at')||0; }catch(e){} if(now()-last>6*3600*1000) checkUpdate(false); else curBuild(); }, 4000);
 
 /* ============ início ============ */
 loadLocal(); applyTheme(); render();
