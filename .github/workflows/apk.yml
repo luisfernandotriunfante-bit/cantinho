@@ -25,7 +25,8 @@ jobs:
             echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
             echo "Chave fixa instalada."
           else
-            echo "ATENCAO: segredo KEYSTORE_B64 ausente. A assinatura vai mudar a cada build."
+            echo "ERRO: segredo KEYSTORE_B64 ausente. Cadastre em Settings > Secrets and variables > Actions."
+            exit 1
           fi
       - run: npx cap add android
       - name: Firebase (notificacoes push)
