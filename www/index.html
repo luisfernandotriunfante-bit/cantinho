@@ -182,6 +182,11 @@ nav button.mid span{margin-top:3px}
 #rtbanner{position:fixed;left:50%;top:68px;transform:translateX(-50%);background:var(--accent);color:var(--on-accent);padding:12px 18px;border-radius:999px;z-index:80;box-shadow:var(--shadow);border:0;font-family:var(--font);font-size:15px;display:none}
 #rtbanner.show{display:block;animation:pop .4s both}
 .lock{font-size:64px;text-align:center}
+.short{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.short button{position:relative;background:var(--card);border:0;border-radius:16px;padding:10px 2px 8px;box-shadow:var(--shadow);font-family:var(--font);color:var(--ink);font-size:11.5px;transition:transform .15s}
+.short button:active{transform:scale(.94)}
+.short button span{display:block;font-size:24px;margin-bottom:2px}
+.short .badge{position:absolute;top:-4px;right:-2px;margin:0}
 </style>
 </head>
 <body>
@@ -245,7 +250,7 @@ function confetti(ms=3200){
 }
 
 /* ============ dados ============ */
-const COLS = ['carinhos','tarefas','fotos','recados','datas','humores','cupons','desejos','capsulas','motivos','quiz'];
+const COLS = ['carinhos','tarefas','fotos','recados','datas','humores','cupons','desejos','capsulas','motivos','quiz','jogos','cartas'];
 const SHARED = ['tema','inicio','niver','carta','cartaV'];
 const CARINHOS = [
   {k:'abraco',e:'🤗',t:'Abraço'}, {k:'cafune',e:'🥰',t:'Cafuné'}, {k:'beijo',e:'😘',t:'Beijinho'},
@@ -404,7 +409,7 @@ function renderNav(){
   const badge = {home:c.pend, tarefas:c.tasks, recados:live('recados').filter(x=>x.by!==S.cfg.eu&&x.t>(S.seen.recados||0)).length, mais:c.cup};
   $('#nav').innerHTML = TABS.map(([k,e,t]) =>
     `<button class="${tab===k?'on':''}" data-t="${k}">${e}<span>${t}${badge[k]?`<b class="badge">${badge[k]}</b>`:''}</span></button>`).join('');
-  $('#nav').querySelectorAll('button').forEach(b => b.onclick = () => { tab=b.dataset.t; sub=null; render(); $('#main').scrollTop=0; });
+  $('#nav').querySelectorAll('button').forEach(b => b.onclick = () => { tab=b.dataset.t; sub=null; backHome=false; openGame=null; render(); $('#main').scrollTop=0; });
 }
 function render(keepScroll){
   if(!S.cfg.eu){ return renderSetup(); }
@@ -471,7 +476,7 @@ function vHome(){
     if(k===0) bday = `<div class="banner"><b>🎂 Hoje é o dia! 🎉</b></div>`;
     else if(k<=60) bday = `<div class="banner">🎂 faltam<br><b>${k} ${k===1?'dia':'dias'}</b><br>para o aniversário dela</div>`;
   }
-  $('#main').innerHTML = `${bday}${motivoCard()}
+  $('#main').innerHTML = `${bday}${atalhosHtml()}${motivoCard()}
     ${pend.length?`<div class="card"><h2>💌 ${esc(S.cfg.par)} está pedindo</h2>${pend.map(x=>`
       <div class="req"><div class="ic">${c(x.k).e}</div><div class="tx"><b>${esc(c(x.k).t)}</b><span class="muted">${ago(x.t)}</span></div>
       <button class="btn" data-ok="${x.id}">Atendido 💗</button></div>`).join('')}</div>`:''}
@@ -494,6 +499,7 @@ function vHome(){
       ${done.length?done.map(x=>`<div class="req"><div class="ic">${c(x.k).e}</div><div class="tx"><b>${esc(c(x.k).t)}</b><span class="muted">${ago(x.doneAt||x.t)}</span></div></div>`).join(''):'<p class="muted">Ainda nenhum… bora começar!</p>'}
     </div>`;
   toqueBind();
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { tab='mais'; sub=b.dataset.go; backHome=true; render(); $('#main').scrollTop=0; });
   document.querySelectorAll('.mood').forEach(b => b.onclick = () => {
     const e = b.dataset.e, txt = $('#mt').value.trim(); const id = day+':'+S.cfg.eu;
     const it = S.humores.find(x=>x.id===id);
@@ -600,19 +606,21 @@ function vMais(){
   if(sub==='capsula') return vCapsula();
   if(sub==='nos') return vNos();
   if(sub==='ajustes') return vAjustes();
-  if(sub==='jogos') return vJogos();
+  if(sub==='jogos') return vJogos(false);
   if(sub==='quiz') return vQuiz(false);
   if(sub==='desafio') return vDesafio(false);
   if(sub==='memoria') return vMemoria();
+  { const gm=sub.match(/^(hot-)?g-(\w+)$/); if(gm && (!gm[1] || hotUnlocked)) return vGame(gm[2], !!gm[1]); }
   if(sub==='motivos') return vMotivos();
   if(sub==='hot') return vHot();
+  if(sub==='hot-jogos') return hotUnlocked ? vJogos(true) : vHot();
   if(sub==='hot-cupons') return hotUnlocked ? vCupons(true) : vHot();
   if(sub==='hot-quiz') return hotUnlocked ? vQuiz(true) : vHot();
   if(sub==='hot-desafio') return hotUnlocked ? vDesafio(true) : vHot();
   if(sub==='hot-dados') return hotUnlocked ? vDados() : vHot();
   const cup = live('cupons').filter(x=>!x.hot && x.by!==S.cfg.eu && !x.used).length;
   const cap = live('capsulas').filter(x=>x.by!==S.cfg.eu && !x.opened && x.d<=dstr()).length;
-  const qz = live('quiz').filter(x=>!x.hot && x.by!==S.cfg.eu && !x.a).length;
+  const qz = pendingCount(false);
   $('#main').innerHTML = `<div class="menu">
     <button data-s="cupons"><span class="e">🎟️</span>Cupons${cup?`<b class="badge">${cup}</b>`:''}</button>
     <button data-s="jogos"><span class="e">🎮</span>Jogos${qz?`<b class="badge">${qz}</b>`:''}</button>
@@ -625,7 +633,7 @@ function vMais(){
   document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { sub=b.dataset.s; render(); $('#main').scrollTop=0; });
 }
 const backBtn = `<button class="back" id="bk">← Voltar</button>`;
-const goBack = () => { $('#bk').onclick = () => { sub=null; render(); }; };
+const goBack = () => goBackTo();
 
 function vCupons(hot){
   hot = !!hot;
@@ -834,8 +842,22 @@ function toqueBind(){
 }
 
 /* ============ jogos, motivos e área só nós dois ============ */
-const PARENT = {quiz:'jogos', desafio:'jogos', memoria:'jogos', 'hot-cupons':'hot', 'hot-quiz':'hot', 'hot-desafio':'hot', 'hot-dados':'hot'};
-const goBackTo = () => { const b=$('#bk'); if(b) b.onclick = () => { sub = PARENT[sub] || null; render(); $('#main').scrollTop=0; }; };
+function parentOf(s){
+  if(!s) return null;
+  if(s==='hot') return null;
+  if(s==='hot-jogos') return 'hot';
+  if(s.startsWith('hot-g-') || s==='hot-quiz' || s==='hot-desafio') return 'hot-jogos';
+  if(s==='hot-cupons' || s==='hot-dados') return 'hot';
+  if(s==='memoria') return 'g-memoria';
+  if(s.startsWith('g-') || s==='quiz' || s==='desafio') return 'jogos';
+  return null;
+}
+let openGame = null, backHome = false;
+const goBackTo = () => { const b=$('#bk'); if(b) b.onclick = () => {
+  if(openGame){ openGame=null; render(); return; }
+  const p = parentOf(sub);
+  if(p===null && backHome){ backHome=false; tab='home'; sub=null; } else sub = p;
+  render(); $('#main').scrollTop=0; }; };
 const neutral = () => notify('Novidade no app 💗', 'Abra para ver');
 
 const VERDADES = ['Qual foi o momento em que você percebeu que me amava?','O que mais te faz sorrir em mim?','Qual lembrança nossa você mais gosta?','Qual mania minha você acha fofa?',
@@ -846,13 +868,17 @@ const DESAFIOS = ['Diga 5 coisas que você ama em mim em 30 segundos','Faça uma
  'Conte um segredo fofo que nunca me contou','Cante o refrão da nossa música','Prepare algo pra eu comer ou beber e sirva com carinho','Planeje nosso próximo encontro, com dia, hora e lugar'];
 const HOT_VERDADES = ['Qual foi o beijo nosso que você nunca esqueceu?','O que em mim te deixa sem ar?','Qual roupa minha mais te encanta?','Em que momento você mais me desejou?',
  'Qual seria a noite romântica perfeita pra você?','Onde você mais gosta de ser beijado(a)?','Que apelido carinhoso mais te arrepia?','O que eu poderia fazer mais vezes que você adoraria?',
- 'Qual foi a vez que eu mais te surpreendi?','Qual lugar você gostaria de namorar a sós comigo?'];
+ 'Qual foi a vez que eu mais te surpreendi?','Qual lugar você gostaria de namorar a sós comigo?',
+ 'Qual parte do meu corpo você mais gosta de beijar?','O que eu faço que te deixa arrepiado(a)?','Qual foi a nossa noite mais quente?','Que fantasia romântica você só contaria pra mim?',
+ 'Onde a gente ainda não se beijou e você gostaria?','Qual foi o pensamento mais safado que você teve comigo essa semana?','Prefere ser provocado(a) devagar ou ser surpreendido(a) de repente?','O que você gostaria que eu sussurrasse no seu ouvido?'];
 const HOT_DESAFIOS = ['Um beijo de 30 segundos, sem pressa','Massagem de 5 minutos nas costas','Sussurre no meu ouvido o que você planejou pra hoje à noite','Escolha a roupa que quer me ver usando',
  'Dança lenta, bem juntinho','Banho a dois com música','Jantar à luz de velas só nós dois','Escreva uma mensagem provocante para eu ler mais tarde',
- 'Me beije em 3 lugares e eu adivinho de olhos fechados','Me vende os olhos e me surpreenda com um sabor'];
-const DADO_ACAO = ['Beijar','Massagear','Acariciar','Sussurrar no ouvido','Abraçar apertado','Elogiar sem parar'];
-const DADO_ONDE = ['no pescoço','nas costas','nas mãos','nos ombros','no ouvido','no cabelo','no rosto'];
-const DADO_TEMPO = ['30 segundos','1 minuto','2 minutos','5 minutos'];
+ 'Me beije em 3 lugares e eu adivinho de olhos fechados','Me venda os olhos e me surpreenda com um sabor',
+ 'Dance pra mim de forma sensual por uma música inteira','Escreva com o dedo uma palavra nas minhas costas e eu adivinho','Escolha 3 lugares da casa para me beijar com vontade',
+ 'Tire uma peça de roupa minha bem devagar (só uma!)','Massagem lenta nos pés e depois trocamos','Me provoque por 2 minutos sem encostar em mim','Me conte, no ouvido, um desejo seu que ainda não realizamos'];
+const DADO_ACAO = ['Beijar','Massagear','Acariciar','Sussurrar no ouvido','Abraçar apertado','Elogiar sem parar','Provocar com os olhos vendados','Morder de leve'];
+const DADO_ONDE = ['no pescoço','nas costas','nas mãos','nos ombros','no ouvido','no cabelo','no rosto','na nuca','na barriga'];
+const DADO_TEMPO = ['30 segundos','1 minuto','2 minutos','5 minutos','10 minutos'];
 const CUPOM_HOT = [['💆','Vale uma massagem com óleo'],['🕯️','Vale um jantar a dois à luz de velas'],['😈','Vale escolher a roupa de hoje à noite'],['🛁','Vale um banho a dois'],['🌙','Vale uma noite só de mimos'],['🎭','Vale um desejo (combinado antes)']];
 
 /* --- motivos --- */
@@ -884,13 +910,195 @@ function vMotivos(){
 }
 
 /* --- jogos --- */
-function vJogos(){
-  $('#main').innerHTML = `${backBtn}<div class="menu">
-    <button data-s="quiz"><span class="e">🧠</span>Quiz do casal</button>
-    <button data-s="desafio"><span class="e">🎴</span>Verdade ou desafio</button>
-    <button data-s="memoria"><span class="e">🃏</span>Memória com nossas fotos</button></div>`;
-  goBackTo(); document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { sub=b.dataset.s; render(); });
+/* ============ jogos em dupla (com prêmio em cupom) ============ */
+const HUB = [['quiz','🧠','Quiz do casal','Você cria a pergunta, o outro responde'],['velha','⭕','Jogo da velha','Três em linha, jogada em tempo real'],
+  ['forca','🔤','Forca','Você escolhe a palavra, o outro adivinha'],['numero','🔢','Adivinhe o número','Quente ou frio, poucas chances'],
+  ['rps','✊','Pedra, papel, tesoura','Os dois escolhem, revela junto'],['memoria','🃏','Memória com fotos','Desafie: terminar em poucas jogadas'],
+  ['desafio','🎴','Verdade ou desafio','Sorteie ou envie um desafio com prêmio']];
+const normL = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+const otherOf = r => r==='ela' ? 'ele' : 'ela';
+function gameDone(g){ return g.type==='velha' ? !!g.winner : g.type==='rps' ? !!g.result : g.type==='desafio' ? !!g.done : !!g.status; }
+function myTurnGame(g){
+  if(gameDone(g)) return false;
+  if(g.type==='velha') return g[g.turn]===S.cfg.eu;
+  if(g.type==='rps') return !g.picks[S.cfg.eu];
+  return g.by!==S.cfg.eu;
 }
+function pendingCount(hot){
+  return live('jogos').filter(g=>!!g.hot===!!hot && myTurnGame(g)).length + live('quiz').filter(x=>!!x.hot===!!hot && x.by!==S.cfg.eu && !x.a).length;
+}
+function awardCoupon(g, giver){ if(!g.prize) return; S.cupons.push({id:uid(), e:'🏆', txt:g.prize, by:giver, t:now(), u:now(), used:false, hot:!!g.hot}); }
+function gnotify(g, title, body){ g.hot ? neutral() : notify(title, body); }
+function gstatus(g){
+  const par = S.cfg.par, me = S.cfg.eu;
+  if(g.type==='velha') return g.winner==='draw' ? 'Empate 🤝' : g.winner ? (g[g.winner]===me?'Você ganhou! 🎉':par+' ganhou') : (g[g.turn]===me?'Sua vez!':'Vez de '+par);
+  if(g.type==='forca') return g.status==='won' ? 'Palavra descoberta 🎉' : g.status==='lost' ? 'Enforcou 😅' : (g.by===me?'aguardando '+par:'adivinhe a palavra');
+  if(g.type==='numero') return g.status==='won' ? 'Acertou em '+g.tries.length+' 🎉' : g.status==='lost' ? 'Acabaram as chances 😅' : (g.by===me?'aguardando '+par:g.tries.length+'/'+g.max+' chances');
+  if(g.type==='rps') return g.result ? (g.result.winner===me?'Você ganhou! 🎉':par+' ganhou') : (g.picks[me]?'aguardando '+par:'escolha a sua jogada');
+  if(g.type==='memoria') return g.status==='won' ? 'Venceu em '+g.moves+' jogadas 🎉' : g.status==='lost' ? 'Passou de '+g.max+' jogadas 😅' : (g.by===me?'aguardando '+par:'termine em até '+g.max+' jogadas');
+  return '';
+}
+function vJogos(hot){
+  hot = !!hot;
+  const pend = live('jogos').filter(g=>!!g.hot===hot && myTurnGame(g)).sort((a,b)=>b.u-a.u);
+  const qpend = live('quiz').filter(x=>!!x.hot===hot && x.by!==S.cfg.eu && !x.a).length;
+  const recent = live('jogos').filter(g=>!!g.hot===hot && !myTurnGame(g)).sort((a,b)=>b.u-a.u).slice(0,6);
+  const subOf = k => (hot?'hot-':'') + (k==='quiz'||k==='desafio' ? k : 'g-'+k);
+  const row = g => { const h=HUB.find(x=>x[0]===g.type); return `<div class="req"><div class="ic">${h[1]}</div><div class="tx"><b>${h[2]}</b><span class="muted">${esc(gstatus(g))}</span></div><button class="btn sm" data-o="${g.id}">Abrir</button></div>`; };
+  $('#main').innerHTML = `${backBtn}
+    ${(pend.length||qpend)?`<div class="card"><h2>🔔 Esperando você</h2>${pend.map(row).join('')}${qpend?`<div class="req"><div class="ic">🧠</div><div class="tx"><b>Quiz</b><span class="muted">${qpend} pergunta(s) esperando</span></div><button class="btn sm" data-k="quiz">Responder</button></div>`:''}</div>`:''}
+    <div class="menu">${HUB.map(([k,e,t,d])=>`<button data-k="${k}"><span class="e">${e}</span>${t}<div class="muted" style="font-size:11px;margin-top:4px">${d}</div></button>`).join('')}</div>
+    ${recent.length?`<div class="card"><h2>Recentes</h2>${recent.map(row).join('')}</div>`:''}`;
+  goBackTo();
+  document.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { openGame=null; sub=subOf(b.dataset.k); render(); $('#main').scrollTop=0; });
+  document.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { const g=S.jogos.find(x=>x.id===b.dataset.o); openGame=g.id; sub=(hot?'hot-':'')+'g-'+g.type; render(); $('#main').scrollTop=0; });
+}
+function newGameForm(type){
+  const prize = `<label class="l">Prêmio pro vencedor (vira um cupom, opcional)</label><input id="gp" placeholder="ex: Vale uma massagem">`;
+  if(type==='forca') return `<input id="gw" placeholder="Palavra ou frase secreta" style="margin-bottom:8px"><input id="gh" placeholder="Dica (opcional)">${prize}`;
+  if(type==='numero') return `<input id="gn" type="number" min="1" max="100" placeholder="Seu número secreto (1 a 100)"><label class="l">Chances</label><div class="chips" id="gm">${[5,7,10].map((n,i)=>`<button class="chip ${i===1?'on':''}" data-n="${n}">${n}</button>`).join('')}</div>${prize}`;
+  if(type==='memoria') return `<p class="muted" style="margin-top:0">${esc(S.cfg.par)} joga com 6 fotos de vocês e precisa terminar em poucas jogadas.</p><label class="l">Máximo de jogadas</label><input id="gj" type="number" min="6" max="40" value="14">${prize}
+    <div style="margin-top:8px"><button class="btn ghost sm" id="gfree">Só treinar, sem prêmio</button></div>`;
+  return prize;
+}
+function gameRowSimple(g){ return `<div class="req"><div class="ic">${HUB.find(x=>x[0]===g.type)[1]}</div><div class="tx"><span class="muted">${esc(gstatus(g))}</span></div><button class="btn sm" data-o="${g.id}">Abrir</button></div>`; }
+function vGame(type, hot){
+  hot = !!hot;
+  const g = openGame ? S.jogos.find(x=>x.id===openGame) : null;
+  if(g && g.type===type) return playGame(g);
+  openGame = null;
+  const meta = HUB.find(h=>h[0]===type);
+  const mine = live('jogos').filter(x=>x.type===type && !!x.hot===hot).sort((a,b)=>b.u-a.u);
+  const active = mine.filter(x=>!gameDone(x)), done = mine.filter(gameDone).slice(0,6);
+  $('#main').innerHTML = `${backBtn}<div class="card"><h2>${meta[1]} ${meta[2]}</h2><p class="muted" style="margin-top:0">${meta[3]}</p>${newGameForm(type)}
+      <div style="margin-top:12px"><button class="btn" id="gnew">${type==='velha'?'Começar partida':type==='rps'?'Chamar pra jogar':'Criar jogo'}</button></div></div>
+    <div class="card"><h2>Em andamento</h2>${active.map(gameRowSimple).join('')||'<p class="muted">Nenhum jogo em andamento.</p>'}</div>
+    ${done.length?`<div class="card"><h2>Terminados</h2>${done.map(gameRowSimple).join('')}</div>`:''}`;
+  goBackTo();
+  document.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { openGame=b.dataset.o; render(); });
+  let maxTries = 7; if($('#gm')) $('#gm').querySelectorAll('button').forEach(b => b.onclick = () => { maxTries=+b.dataset.n; $('#gm').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); });
+  if($('#gfree')) $('#gfree').onclick = () => { sub='memoria'; render(); };
+  $('#gnew').onclick = () => {
+    const me=S.cfg.eu, base={id:uid(), type, by:me, hot, prize:($('#gp')?$('#gp').value.trim():''), t:now(), u:now()};
+    let extra={};
+    if(type==='velha') extra={board:Array(9).fill(''), turn:'X', X:me, O:otherOf(me), winner:null};
+    else if(type==='forca'){ const w=$('#gw').value.trim(); if(normL(w).replace(/[^A-Z]/g,'').length<2) return toast('Escolha uma palavra com pelo menos 2 letras'); extra={word:w, hint:$('#gh').value.trim(), guesses:[], status:null}; }
+    else if(type==='numero'){ const n=+$('#gn').value; if(!(n>=1&&n<=100)) return toast('Escolha um número de 1 a 100'); extra={secret:n, max:maxTries, tries:[], status:null}; }
+    else if(type==='rps') extra={picks:{ela:'',ele:''}, result:null, round:1};
+    else if(type==='memoria'){ const ph=live('fotos').filter(x=>x.img); if(ph.length<6) return toast('Precisam de pelo menos 6 fotos no app 📸'); extra={ids:[...ph].sort(()=>Math.random()-.5).slice(0,6).map(p=>p.id), max:Math.max(6,+$('#gj').value||14), status:null, moves:null}; }
+    const ng = Object.assign(base, extra); S.jogos.push(ng); openGame = ng.id;
+    gnotify(ng, meta[1]+' '+meta[2]+' 🎮', S.cfg.nome+(type==='velha'?' começou uma partida com você':' chamou você pra jogar')+(ng.prize?' (vale prêmio!)':'')); floaty(meta[1],4); commit();
+  };
+}
+function prizeLine(g){ return g.prize ? `<div class="muted" style="text-align:center;margin-bottom:8px">🏆 Vale: ${esc(g.prize)}</div>` : ''; }
+function playGame(g){
+  const me=S.cfg.eu, par=esc(S.cfg.par), meta=HUB.find(h=>h[0]===g.type);
+  const head = `${backBtn}<div class="card"><h2>${meta[1]} ${meta[2]}</h2>${prizeLine(g)}<div class="muted" style="text-align:center;margin-bottom:10px" id="gs">${esc(gstatus(g))}</div>`;
+  const fin = (winnerMe) => { if(winnerMe){ confetti(3000); haptic([40,60,40]); } };
+  if(g.type==='velha'){
+    const sym = {X:'❌', O:'⭕'}, mineSym = g.X===me?'X':'O';
+    $('#main').innerHTML = `${head}<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:300px;margin:0 auto">${g.board.map((c,i)=>
+      `<button class="mc" data-i="${i}" style="font-size:38px;background:var(--bg);color:var(--ink);border:2px solid var(--line)">${c?sym[c]:''}</button>`).join('')}</div>
+      <p class="muted" style="text-align:center;margin:12px 0 0">Você é ${sym[mineSym]}</p>
+      ${g.winner?`<div style="text-align:center;margin-top:12px"><button class="btn" id="rev">Revanche</button></div>`:''}</div>`;
+    goBackTo();
+    if(g.winner && g.winner!=='draw' && g[g.winner]===me) fin(true);
+    document.querySelectorAll('[data-i]').forEach(b => b.onclick = () => {
+      const i=+b.dataset.i; if(g.winner || g[g.turn]!==me || g.board[i]) return;
+      g.board[i]=g.turn; g.u=now(); haptic(15);
+      const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+      if(L.some(l=>l.every(k=>g.board[k]===g.turn))){ g.winner=g.turn; awardCoupon(g, otherOf(me)); fin(true); gnotify(g,'Jogo da velha ⭕', S.cfg.nome+' ganhou a partida'+(g.prize?' e levou o prêmio!':'')); }
+      else if(g.board.every(Boolean)){ g.winner='draw'; gnotify(g,'Jogo da velha ⭕','Deu empate!'); }
+      else { g.turn = g.turn==='X'?'O':'X'; gnotify(g,'Sua vez! ⭕','Jogada de '+S.cfg.nome+' no jogo da velha'); }
+      commit();
+    });
+    if($('#rev')) $('#rev').onclick = () => { const ng={id:uid(), type:'velha', by:me, hot:g.hot, prize:g.prize, t:now(), u:now(), board:Array(9).fill(''), turn:'X', X:g.O, O:g.X, winner:null};
+      S.jogos.push(ng); openGame=ng.id; gnotify(ng,'Revanche! ⭕', S.cfg.nome+' quer a revanche'); commit(); };
+    return;
+  }
+  if(g.type==='forca'){
+    const W=g.word, letters=new Set(g.guesses), wrong=g.guesses.filter(l=>!normL(W).includes(l)).length, setter=g.by===me;
+    const shown=[...W].map(ch=>{ const n=normL(ch); if(!/[A-Z]/.test(n)) return ch===' '?'  ':ch; return (letters.has(n)||g.status==='lost'||setter)?ch.toUpperCase():'_'; }).join(' ');
+    const parts=[`<circle cx="150" cy="60" r="16" stroke="currentColor" stroke-width="4" fill="none"/>`,`<line x1="150" y1="76" x2="150" y2="125" stroke="currentColor" stroke-width="4"/>`,
+      `<line x1="150" y1="90" x2="128" y2="110" stroke="currentColor" stroke-width="4"/>`,`<line x1="150" y1="90" x2="172" y2="110" stroke="currentColor" stroke-width="4"/>`,
+      `<line x1="150" y1="125" x2="130" y2="155" stroke="currentColor" stroke-width="4"/>`,`<line x1="150" y1="125" x2="170" y2="155" stroke="currentColor" stroke-width="4"/>`];
+    $('#main').innerHTML = `${head}<svg viewBox="0 0 220 180" style="width:100%;max-width:240px;display:block;margin:0 auto;color:var(--ink)"><line x1="30" y1="170" x2="120" y2="170" stroke="currentColor" stroke-width="4"/><line x1="60" y1="170" x2="60" y2="20" stroke="currentColor" stroke-width="4"/><line x1="60" y1="20" x2="150" y2="20" stroke="currentColor" stroke-width="4"/><line x1="150" y1="20" x2="150" y2="44" stroke="currentColor" stroke-width="4"/>${parts.slice(0,wrong).join('')}</svg>
+      <div style="text-align:center;font-size:${W.length>9?20:26}px;letter-spacing:2px;margin:12px 0;word-break:break-word">${esc(shown)}</div>
+      ${g.hint?`<p class="muted" style="text-align:center">💡 ${esc(g.hint)}</p>`:''}<p class="muted" style="text-align:center">Erros: ${wrong}/6</p>
+      ${(!setter && !g.status)?`<div class="chips" style="justify-content:center">${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l=>`<button class="chip" data-l="${l}" ${letters.has(l)?'disabled style="opacity:.3"':''}>${l}</button>`).join('')}</div>`:''}</div>`;
+    goBackTo();
+    if(g.status==='won' && !setter) fin(true);
+    document.querySelectorAll('[data-l]').forEach(b => b.onclick = () => {
+      const l=b.dataset.l; g.guesses.push(l); g.u=now(); haptic(10);
+      const all=[...normL(W)].filter(c=>/[A-Z]/.test(c)).every(c=>g.guesses.includes(c)), w2=g.guesses.filter(x=>!normL(W).includes(x)).length;
+      if(all){ g.status='won'; awardCoupon(g, g.by); fin(true); gnotify(g,'Forca 🔤', S.cfg.nome+' descobriu sua palavra'+(g.prize?' e ganhou o prêmio!':'')); }
+      else if(w2>=6){ g.status='lost'; gnotify(g,'Forca 🔤', S.cfg.nome+' não conseguiu descobrir sua palavra'); }
+      commit();
+    });
+    return;
+  }
+  if(g.type==='numero'){
+    const setter=g.by===me;
+    const hint = n => { const d=Math.abs(n-g.secret); return (n<g.secret?'maior ↑':'menor ↓')+' · '+(d<=5?'🔥 quente':d<=15?'🌤️ morno':'❄️ frio'); };
+    $('#main').innerHTML = `${head}${setter?`<p style="text-align:center;font-size:18px">Seu número: <b>${g.secret}</b></p>`:''}
+      <div>${g.tries.map(n=>`<div class="req"><div class="ic">${n===g.secret?'🎯':'🔢'}</div><div class="tx"><b>${n}</b><span class="muted">${n===g.secret?'acertou!':hint(n)}</span></div></div>`).join('')||'<p class="muted" style="text-align:center">Nenhuma tentativa ainda.</p>'}</div>
+      <p class="muted" style="text-align:center">Chances: ${g.tries.length}/${g.max}${g.status==='lost'?' · era o '+g.secret:''}</p>
+      ${(!setter && !g.status)?`<div class="row"><input id="gt" type="number" min="1" max="100" placeholder="Seu palpite (1 a 100)"><button class="btn" id="gb">Chutar</button></div>`:''}</div>`;
+    goBackTo();
+    if(g.status==='won' && !setter) fin(true);
+    if($('#gb')) $('#gb').onclick = () => {
+      const n=+$('#gt').value; if(!(n>=1&&n<=100)) return toast('Use um número de 1 a 100');
+      g.tries.push(n); g.u=now(); haptic(12);
+      if(n===g.secret){ g.status='won'; awardCoupon(g, g.by); fin(true); gnotify(g,'Adivinhe o número 🔢', S.cfg.nome+' acertou seu número em '+g.tries.length+' tentativas'+(g.prize?' e ganhou o prêmio!':'')); }
+      else if(g.tries.length>=g.max){ g.status='lost'; gnotify(g,'Adivinhe o número 🔢', S.cfg.nome+' não acertou seu número'); }
+      commit();
+    };
+    return;
+  }
+  if(g.type==='rps'){
+    const E={pedra:'✊',papel:'✋',tesoura:'✌️'}, beats={pedra:'tesoura',papel:'pedra',tesoura:'papel'};
+    const mine=g.picks[me], his=g.picks[otherOf(me)], both=!!(mine&&his);
+    $('#main').innerHTML = `${head}<div class="score"><div><b>${both||g.result?E[mine]:(mine?'✅':'❔')}</b>você</div><div><b>${both||g.result?E[his]:(his?'✅':'❔')}</b>${par}</div></div>
+      ${both&&!g.result?`<p style="text-align:center;margin-top:12px">Empate! 🤝</p><div style="text-align:center"><button class="btn" id="again">Jogar de novo</button></div>`:''}
+      ${!mine&&!g.result?`<div class="chips" style="justify-content:center;margin-top:14px">${Object.keys(E).map(k=>`<button class="chip" data-p="${k}" style="font-size:34px;padding:12px 18px">${E[k]}</button>`).join('')}</div>`:''}
+      ${g.result?`<div style="text-align:center;margin-top:14px"><button class="btn" id="rev">Revanche</button></div>`:''}</div>`;
+    goBackTo();
+    if(g.result && g.result.winner===me) fin(true);
+    document.querySelectorAll('[data-p]').forEach(b => b.onclick = () => {
+      g.picks[me]=b.dataset.p; g.u=now(); haptic(20); const a=g.picks[me], c=g.picks[otherOf(me)];
+      if(c){ if(a===c){ /* empate: mostra e permite nova rodada */ } else { const w = beats[a]===c ? me : otherOf(me); g.result={winner:w}; awardCoupon(g, otherOf(w)); if(w===me) fin(true); gnotify(g,'Pedra, papel, tesoura ✊', S.cfg.nome+' jogou: '+(w===me?'você perdeu':'você ganhou')+(g.prize&&w===me?' 😅':'')); } }
+      else gnotify(g,'Pedra, papel, tesoura ✊', S.cfg.nome+' já escolheu. Sua vez!');
+      commit();
+    });
+    if($('#again')) $('#again').onclick = () => { g.picks={ela:'',ele:''}; g.round=(g.round||1)+1; g.u=now(); commit(); };
+    if($('#rev')) $('#rev').onclick = () => { const ng={id:uid(), type:'rps', by:me, hot:g.hot, prize:g.prize, t:now(), u:now(), picks:{ela:'',ele:''}, result:null, round:1}; S.jogos.push(ng); openGame=ng.id; gnotify(ng,'Revanche! ✊', S.cfg.nome+' quer a revanche'); commit(); };
+    return;
+  }
+  if(g.type==='memoria'){
+    const setter=g.by===me;
+    if(setter || g.status){
+      $('#main').innerHTML = `${head}<p class="muted" style="text-align:center">${setter?par+' precisa terminar em até '+g.max+' jogadas.':'Você jogou '+g.moves+' vezes (limite '+g.max+').'}</p></div>`;
+      goBackTo(); if(g.status==='won' && !setter) fin(true); return;
+    }
+    const ph = g.ids.map(id=>live('fotos').find(x=>x.id===id)).filter(Boolean);
+    if(ph.length<3){ $('#main').innerHTML = `${head}<p class="muted">As fotos desse desafio não estão mais no app.</p></div>`; goBackTo(); return; }
+    if(!window.__mg || window.__mg.id!==g.id){ const cards=[...ph,...ph].map((p,i)=>({k:p.id,img:p.img})).sort(()=>Math.random()-.5); window.__mg={id:g.id, cards, open:[], done:new Set(), moves:0, lock:false}; }
+    const m=window.__mg;
+    $('#main').innerHTML = `${head}<div class="muted" style="text-align:center">Jogadas: ${m.moves}/${g.max}</div><div class="memo" style="margin-top:10px">${m.cards.map((c,idx)=>`<button class="mc ${m.done.has(c.k)?'done':''}" data-i="${idx}">${(m.open.includes(idx)||m.done.has(c.k))?`<img src="${c.img}">`:'💗'}</button>`).join('')}</div></div>`;
+    goBackTo();
+    document.querySelectorAll('.mc').forEach(b => b.onclick = () => {
+      const idx=+b.dataset.i; if(m.lock || m.open.includes(idx) || m.done.has(m.cards[idx].k)) return;
+      m.open.push(idx); haptic(10);
+      if(m.open.length===2){ m.moves++; const [a,c]=m.open;
+        const finish = () => { if(m.done.size===ph.length){ g.moves=m.moves; g.status=m.moves<=g.max?'won':'lost'; g.u=now(); if(g.status==='won'){ awardCoupon(g, g.by); fin(true); } gnotify(g,'Memória 🃏', S.cfg.nome+(g.status==='won'?' venceu seu desafio de memória':' não conseguiu no limite de jogadas')); window.__mg=null; commit(); return true; } return false; };
+        if(m.cards[a].k===m.cards[c].k){ m.done.add(m.cards[a].k); m.open=[]; haptic([30,50,30]); if(!finish()) playGame(g); }
+        else if(m.moves>=g.max){ g.moves=m.moves; g.status='lost'; g.u=now(); gnotify(g,'Memória 🃏', S.cfg.nome+' não conseguiu no limite de jogadas'); window.__mg=null; commit(); }
+        else { m.lock=true; playGame(g); setTimeout(()=>{ m.open=[]; m.lock=false; if(openGame===g.id && !g.status) playGame(g); },900); } }
+      else playGame(g);
+    });
+  }
+}
+
 function vQuiz(hot){
   const mine_ = x => !!x.hot===!!hot;
   const all = live('quiz').filter(mine_).sort((a,b)=>b.t-a.t);
@@ -933,28 +1141,75 @@ function vQuiz(hot){
   });
   document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.quiz.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
 }
-let dkind='v', dcard='';
+/* --- cartas nossas (desafios e dados editáveis) --- */
+const onlyMine = k => safeGet('nc_only_'+k)==='1';
+const setOnlyMine = (k,v) => safeSet('nc_only_'+k, v?'1':'0');
+function cartasDe(kind, hot){ return live('cartas').filter(x=>x.kind===kind && !!x.hot===!!hot); }
+function deckOf(kind, hot, base){ const own=cartasDe(kind,hot).map(x=>x.txt); return (onlyMine(kind+(hot?'h':'')) && own.length) ? own : [...base, ...own]; }
+let dkind='v', dcard='', dSend=false;
 function vDesafio(hot){
-  const deck = hot ? (dkind==='v'?HOT_VERDADES:HOT_DESAFIOS) : (dkind==='v'?VERDADES:DESAFIOS);
-  $('#main').innerHTML = `${backBtn}<div class="card"><h2>${hot?'🎴 Desafios a dois':'🎴 Verdade ou desafio'}</h2>
+  hot = !!hot;
+  const base = hot ? (dkind==='v'?HOT_VERDADES:HOT_DESAFIOS) : (dkind==='v'?VERDADES:DESAFIOS);
+  const key = dkind+(hot?'h':''); const own = cartasDe(dkind,hot);
+  const inbox = live('jogos').filter(g=>g.type==='desafio' && !!g.hot===hot && g.by!==S.cfg.eu && !g.done);
+  const sent = live('jogos').filter(g=>g.type==='desafio' && !!g.hot===hot && g.by===S.cfg.eu).sort((a,b)=>b.u-a.u).slice(0,5);
+  $('#main').innerHTML = `${backBtn}
+    ${inbox.length?`<div class="card"><h2>🎁 Desafios pra você</h2>${inbox.map(g=>`<div class="req"><div class="ic">🎯</div><div class="tx"><b>${esc(g.txt)}</b>${g.prize?`<span class="muted">🏆 ${hot?'vale uma surpresa':esc(g.prize)}</span>`:''}</div><button class="btn sm" data-ok="${g.id}">Cumpri!</button></div>`).join('')}</div>`:''}
+    <div class="card"><h2>${hot?'🎴 Desafios a dois':'🎴 Verdade ou desafio'}</h2>
     <div class="chips" id="dk"><button class="chip ${dkind==='v'?'on':''}" data-k="v">💬 Verdade</button><button class="chip ${dkind==='d'?'on':''}" data-k="d">🎯 Desafio</button></div>
     <div class="deck" style="margin-top:14px" id="dcard">${esc(dcard)||'Toque em sortear'}</div>
-    <div style="margin-top:14px;text-align:center"><button class="btn" id="dr">🎲 Sortear</button></div>
-    <p class="muted" style="text-align:center">Tudo é opcional: quem não quiser, pula e sorteia outro 💗</p></div>`;
+    <div style="margin-top:14px;text-align:center"><button class="btn" id="dr">🎲 Sortear</button> ${(dcard&&dkind==='d')?`<button class="btn ghost" id="ds">🏆 Enviar com prêmio</button>`:''}</div>
+    ${dSend?`<div style="margin-top:12px"><input id="dp" placeholder="Prêmio se cumprir (vira cupom)"><div style="margin-top:8px"><button class="btn sm" id="dsok">Enviar desafio</button></div></div>`:''}
+    <p class="muted" style="text-align:center">Tudo é opcional: quem não quiser, pula e sorteia outro 💗</p></div>
+    <div class="card"><h2>✍️ Cartas de vocês (${own.length})</h2>
+      <p class="muted" style="margin-top:0">Adicionem as suas próprias ${dkind==='v'?'perguntas':'ideias de desafio'}. Elas entram no sorteio.</p>
+      <div class="row"><input id="cn" placeholder="${dkind==='v'?'Nova pergunta…':'Novo desafio…'}"><button class="btn" id="ca">+</button></div>
+      ${own.length?`<label class="l"><input type="checkbox" id="om" ${onlyMine(key)?'checked':''} style="width:auto"> Sortear só as nossas</label>`:''}
+      ${own.map(x=>`<div class="req"><div class="tx">${esc(x.txt)}</div><button class="x" data-d="${x.id}">✕</button></div>`).join('')}</div>
+    ${sent.length?`<div class="card"><h2>Que você enviou</h2>${sent.map(g=>`<div class="req"><div class="ic">${g.done?'✅':'⏳'}</div><div class="tx"><b>${esc(g.txt)}</b><span class="muted">${g.done?'cumprido':'aguardando'}</span></div></div>`).join('')}</div>`:''}`;
   goBackTo();
-  $('#dk').querySelectorAll('button').forEach(b => b.onclick = () => { dkind=b.dataset.k; dcard=''; vDesafio(hot); });
-  $('#dr').onclick = () => { dcard = deck[Math.floor(Math.random()*deck.length)]; haptic(30); const c=$('#dcard'); c.style.animation='none'; void c.offsetWidth; c.style.animation=''; c.textContent=dcard; };
+  $('#dk').querySelectorAll('button').forEach(b => b.onclick = () => { dkind=b.dataset.k; dcard=''; dSend=false; vDesafio(hot); });
+  $('#dr').onclick = () => { const dk = deckOf(dkind, hot, base); dcard = dk[Math.floor(Math.random()*dk.length)]; dSend=false; haptic(30); vDesafio(hot); };
+  if($('#ds')) $('#ds').onclick = () => { dSend=true; vDesafio(hot); };
+  if($('#dsok')) $('#dsok').onclick = () => { const g={id:uid(), type:'desafio', by:S.cfg.eu, hot, txt:dcard, prize:$('#dp').value.trim(), done:false, t:now(), u:now()};
+    S.jogos.push(g); dSend=false; toast('Desafio enviado 🎯'); gnotify(g,'Desafio pra você 🎯', S.cfg.nome+' te desafiou'+(g.prize?' (vale prêmio!)':'')); commit(); };
+  document.querySelectorAll('[data-ok]').forEach(b => b.onclick = () => { const g=S.jogos.find(x=>x.id===b.dataset.ok); g.done=true; g.u=now(); awardCoupon(g, g.by); confetti(2400); haptic([40,60,40]);
+    toast(g.prize?'Cumprido! Você ganhou um cupom 🏆':'Cumprido! ✅'); gnotify(g,'Desafio cumprido ✅', S.cfg.nome+' cumpriu seu desafio'); commit(); });
+  const add = () => { const v=$('#cn').value.trim(); if(!v) return; S.cartas.push({id:uid(), kind:dkind, hot, txt:v, by:S.cfg.eu, t:now(), u:now()}); commit(); };
+  $('#ca').onclick = add; $('#cn').onkeydown = e => { if(e.key==='Enter') add(); };
+  if($('#om')) $('#om').onchange = e => { setOnlyMine(key, e.target.checked); };
+  document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.cartas.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
 }
 function vDados(){
+  const A=deckOf('da',true,DADO_ACAO), O=deckOf('do',true,DADO_ONDE), T=deckOf('dt',true,DADO_TEMPO);
+  const mineAll=[['da','Ação'],['do','Onde'],['dt','Tempo']].flatMap(([k,n])=>cartasDe(k,true).map(x=>({...x,n})));
   $('#main').innerHTML = `${backBtn}<div class="card" style="text-align:center"><h2>🎲 Dados do amor</h2>
     <div class="dice"><div id="d1">?</div><div id="d2">?</div><div id="d3">?</div></div>
-    <button class="btn" id="dr">Rolar</button><p class="muted">O resto vocês combinam 😉</p></div>`;
+    <button class="btn" id="dr">Rolar</button><p class="muted">O resto vocês combinam 😉</p></div>
+    <div class="card"><h2>✍️ Personalizar os dados</h2>
+      <div class="chips" id="dkd"><button class="chip on" data-k="da">Ação</button><button class="chip" data-k="do">Onde</button><button class="chip" data-k="dt">Tempo</button></div>
+      <div class="row" style="margin-top:10px"><input id="cn" placeholder="Nova opção…"><button class="btn" id="ca">+</button></div>
+      ${mineAll.length?`<label class="l"><input type="checkbox" id="om" ${onlyMine('dice')?'checked':''} style="width:auto"> Usar só as nossas (onde existirem)</label>`:''}
+      ${mineAll.map(x=>`<div class="req"><div class="tx"><span class="muted">${x.n}:</span> ${esc(x.txt)}</div><button class="x" data-d="${x.id}">✕</button></div>`).join('')}</div>`;
   goBackTo();
+  let kd='da'; $('#dkd').querySelectorAll('button').forEach(b => b.onclick = () => { kd=b.dataset.k; $('#dkd').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); });
   $('#dr').onclick = () => {
-    const els=['d1','d2','d3'].map(i=>$('#'+i)), sets=[DADO_ACAO,DADO_ONDE,DADO_TEMPO]; els.forEach(e=>e.classList.add('roll'));
+    const els=['d1','d2','d3'].map(i=>$('#'+i)), sets=[A,O,T]; els.forEach(e=>e.classList.add('roll'));
     let n=0; const t=setInterval(()=>{ els.forEach((e,i)=>e.textContent=sets[i][Math.floor(Math.random()*sets[i].length)]); haptic(8); if(++n>=12){ clearInterval(t); els.forEach(e=>e.classList.remove('roll')); haptic([40,60,40]); } }, 90);
   };
+  const add = () => { const v=$('#cn').value.trim(); if(!v) return; S.cartas.push({id:uid(), kind:kd, hot:true, txt:v, by:S.cfg.eu, t:now(), u:now()}); commit(); };
+  $('#ca').onclick = add; $('#cn').onkeydown = e => { if(e.key==='Enter') add(); };
+  if($('#om')) $('#om').onchange = e => { ['da','do','dt'].forEach(k=>setOnlyMine(k+'h', e.target.checked)); setOnlyMine('dice', e.target.checked); };
+  document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.cartas.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
 }
+function atalhosHtml(){
+  const cup = live('cupons').filter(x=>!x.hot && x.by!==S.cfg.eu && !x.used).length;
+  const cap = live('capsulas').filter(x=>x.by!==S.cfg.eu && !x.opened && x.d<=dstr()).length;
+  const items=[['cupons','🎟️','Cupons',cup],['jogos','🎮','Jogos',pendingCount(false)],['motivos','💝','Motivos',0],['desejos','💭','Desejos',0],
+    ['capsula','⏳','Cápsula',cap],['nos','🎂','Nós',0],['hot','🌙','Só nós',0],['ajustes','⚙️','Ajustes',0]];
+  return `<div class="short">${items.map(([k,e,t,n])=>`<button data-go="${k}"><span>${e}</span>${t}${n?`<b class="badge">${n}</b>`:''}</button>`).join('')}</div>`;
+}
+
 let memo=null;
 function vMemoria(){
   const ph = live('fotos').filter(x=>x.img);
@@ -993,8 +1248,7 @@ function vHot(){
     <p class="muted" style="margin:0">Conteúdo pra adultos, sempre opcional e combinado entre vocês. Os avisos daqui nunca mostram o conteúdo na notificação 💗</p></div>
     <div class="menu">
       <button data-s="hot-cupons"><span class="e">🎟️</span>Cupons</button>
-      <button data-s="hot-quiz"><span class="e">🔥</span>Quiz picante</button>
-      <button data-s="hot-desafio"><span class="e">🎴</span>Desafios</button>
+      <button data-s="hot-jogos"><span class="e">🎮</span>Jogos${pendingCount(true)?`<b class="badge">${pendingCount(true)}</b>`:''}</button>
       <button data-s="hot-dados"><span class="e">🎲</span>Dados do amor</button></div>`;
   goBackTo(); document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { sub=b.dataset.s; render(); });
 }
