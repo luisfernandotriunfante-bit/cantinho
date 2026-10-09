@@ -45,9 +45,16 @@ jobs:
           cp android-patch/MainActivity.java "$D/"
           cp android-patch/file_paths.xml android/app/src/main/res/xml/file_paths.xml
           sed -i 's#</manifest>#    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
+          for PERM in POST_NOTIFICATIONS SCHEDULE_EXACT_ALARM USE_EXACT_ALARM VIBRATE RECEIVE_BOOT_COMPLETED WAKE_LOCK; do
+            if ! grep -q "android.permission.$PERM\"" android/app/src/main/AndroidManifest.xml; then
+              sed -i "s#</manifest>#    <uses-permission android:name=\"android.permission.$PERM\" />\n</manifest>#" android/app/src/main/AndroidManifest.xml
+            fi
+          done
+          grep -n "uses-permission" android/app/src/main/AndroidManifest.xml
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/; s/versionName \"1.0\"/versionName \"3.${{ github.run_number }}\"/" android/app/build.gradle
           grep -n "versionCode\|versionName" android/app/build.gradle
           grep -q "versionCode ${{ github.run_number }}" android/app/build.gradle || { echo "::error::VERSIONCODE nao foi alterado"; exit 1; }
+          grep -q POST_NOTIFICATIONS android/app/src/main/AndroidManifest.xml || { echo "::error::POST_NOTIFICATIONS nao foi adicionada"; exit 1; }
           grep -q REQUEST_INSTALL_PACKAGES android/app/src/main/AndroidManifest.xml || { echo "::error::PERMISSAO nao foi adicionada"; exit 1; }
       - name: Firebase (notificacoes push)
         run: |

@@ -3,6 +3,7 @@ package com.nosso.cantinho;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.provider.CalendarContract;
 import android.provider.Settings;
 import androidx.core.content.FileProvider;
 import com.getcapacitor.JSObject;
@@ -96,5 +97,25 @@ public class ApkInstallerPlugin extends Plugin {
                 }
             }
         }).start();
+    }
+
+    @PluginMethod
+    public void addToCalendar(PluginCall call) {
+        try {
+            long start = (long) call.getDouble("start", 0.0).doubleValue();
+            long end = (long) call.getDouble("end", (double) (start + 3600000L)).doubleValue();
+            Intent i = new Intent(Intent.ACTION_INSERT);
+            i.setData(CalendarContract.Events.CONTENT_URI);
+            i.putExtra(CalendarContract.Events.TITLE, call.getString("title", "Nosso Cantinho"));
+            i.putExtra(CalendarContract.Events.DESCRIPTION, call.getString("desc", ""));
+            i.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, start);
+            i.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, end);
+            i.putExtra(CalendarContract.Events.HAS_ALARM, 1);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Nao consegui abrir a agenda: " + e.getMessage());
+        }
     }
 }

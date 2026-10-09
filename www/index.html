@@ -159,6 +159,10 @@ nav button.mid span{margin-top:3px}
 .hold.his::after{content:"";position:absolute;inset:-10px;border-radius:50%;border:3px dashed var(--accent2);animation:ring 1.4s infinite}
 .pad{height:120px;border-radius:var(--radius);background:linear-gradient(135deg,var(--bg2),var(--bg));border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;
   color:var(--soft);font-size:14px;text-align:center;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.plan-line{margin-top:4px;font-size:13px;color:var(--ink)}
+.plan-actions{flex-basis:100%;display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 0 44px}
+.plan{flex-basis:100%;margin:8px 0 2px 0;padding:12px;border-radius:14px;background:var(--bg2);border:1.5px dashed var(--line)}
+.due{font-size:11px;padding:1px 7px;border-radius:9px;margin-left:4px}.due.today{background:var(--accent);color:var(--on-accent)}.due.late{background:#e25555;color:#fff}
 .online{display:inline-block;width:9px;height:9px;border-radius:50%;background:#bbb;margin-right:6px}
 .online.on{background:#3ddc84;box-shadow:0 0 8px #3ddc84}
 .tbtn{width:100%;padding:16px;font-size:16px}
@@ -327,11 +331,13 @@ async function syncNow(silent){
 let last = null;
 function counts(){ return { pend:live('carinhos').filter(x=>!x.done&&x.by!==S.cfg.eu).length, notes:live('recados').filter(x=>x.by!==S.cfg.eu).length,
   tasks:live('tarefas').filter(x=>x.by!==S.cfg.eu).length, cup:live('cupons').filter(x=>x.by!==S.cfg.eu).length,
-  usedMine:live('cupons').filter(x=>x.by===S.cfg.eu && x.used && !x.ack).length }; }
+  usedMine:live('cupons').filter(x=>x.by===S.cfg.eu && x.used && !x.ack).length,
+  planMine:live('tarefas').filter(x=>x.by===S.cfg.eu && !x.done && x.plan && x.plan.by!==S.cfg.eu).length }; }
 function detectNew(){
   const c = counts();
   if(last){
     if(c.usedMine>last.usedMine){ toast('🎟️ '+S.cfg.par+' usou um cupom seu! Hora de cumprir 💗'); haptic([60,80,60,80,120]); floaty('🎟️',6); banner('🎟️ '+S.cfg.par+' usou um cupom seu!', ()=>{ tab='home'; sub=null; render(); }); }
+    else if(c.planMine>last.planMine){ toast('📅 '+S.cfg.par+' marcou quando vai fazer um favorzinho!'); floaty('📅',4); }
     else if(c.pend>last.pend){ toast('💗 Pedido novo de '+S.cfg.par+'!'); floaty('💗',5); }
     else if(c.notes>last.notes) toast('💌 Recadinho novo!');
     else if(c.tasks>last.tasks) toast('📝 Favorzinho novo na lista');
@@ -339,7 +345,7 @@ function detectNew(){
   }
   last = c;
 }
-function commit(){ saveLocal(); render(); syncNow(true).then(()=>rtSend('sync')); }
+function commit(){ saveLocal(); render(); syncNow(true).then(()=>{ rtSend('sync'); try{ syncAlarms(); }catch(e){} }); }
 
 /* ============ push (Capacitor + Firebase) ============ */
 async function notify(title, body){
@@ -486,10 +492,11 @@ function vHome(){
     if(k===0) bday = `<div class="banner"><b>🎂 Hoje é o dia! 🎉</b></div>`;
     else if(k<=60) bday = `<div class="banner">🎂 faltam<br><b>${k} ${k===1?'dia':'dias'}</b><br>para o aniversário dela</div>`;
   }
+  const agenda = live('tarefas').filter(x=>!x.done && x.plan).sort((a,b)=>a.plan.at-b.plan.at).slice(0,4);
   const usedMine = live('cupons').filter(x=>!x.hot && x.by===S.cfg.eu && x.used && !x.ack);
   $('#main').innerHTML = `${bday}${usedMine.length?`<div class="card" style="border:2px solid var(--accent)"><h2>🎟️ ${esc(S.cfg.par)} usou ${usedMine.length>1?'cupons seus':'um cupom seu'}!</h2>${usedMine.map(x=>`
       <div class="req"><div class="ic">${esc(x.e)}</div><div class="tx"><b>${esc(x.txt)}</b><span class="muted">usado ${ago(x.usedAt||x.u)}</span></div>
-      <button class="btn" data-ack="${x.id}">Cumprido ✅</button></div>`).join('')}</div>`:''}${motivoCard()}
+      <button class="btn" data-ack="${x.id}">Cumprido ✅</button></div>`).join('')}</div>`:''}${agenda.length?`<div class="card"><h2>📅 Combinados</h2>${agenda.map(x=>`<div class="req"><div class="ic">🔧</div><div class="tx"><b>${esc(x.txt)}</b><span class="muted">${esc(fmtAt(x.plan.at))} · ${x.plan.by===S.cfg.eu?'você vai fazer':esc(S.cfg.par)+' vai fazer'} ${dueTag(x)}</span></div></div>`).join('')}</div>`:''}${motivoCard()}
     ${pend.length?`<div class="card"><h2>💌 ${esc(S.cfg.par)} está pedindo</h2>${pend.map(x=>`
       <div class="req"><div class="ic">${c(x.k).e}</div><div class="tx"><b>${esc(c(x.k).t)}</b><span class="muted">${ago(x.t)}</span></div>
       <button class="btn" data-ok="${x.id}">Atendido 💗</button></div>`).join('')}</div>`:''}
@@ -531,24 +538,99 @@ function vHome(){
 }
 
 /* --- tarefas --- */
+/* --- afazeres: agendar, alarme e agenda do celular --- */
+const LN = () => (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.LocalNotifications) || null;
+const fmtAt = ms => { const d=new Date(ms); return d.toLocaleString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',',''); };
+const pad2 = n => String(n).padStart(2,'0');
+const toLocalInput = ms => { const d=new Date(ms); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'T'+pad2(d.getHours())+':'+pad2(d.getMinutes()); };
+function quickTimes(){
+  const n=new Date(), at=(add,h,m=0)=>{ const d=new Date(n.getFullYear(),n.getMonth(),n.getDate()+add,h,m,0,0); return d.getTime(); };
+  const sat = (6-n.getDay()+7)%7 || 7;
+  const q=[]; if(n.getHours()<19) q.push(['Hoje à noite', at(0,20)]); q.push(['Amanhã cedo', at(1,9)],['Amanhã à noite', at(1,20)],['Sábado de manhã', at(sat,10)],['Domingo de manhã', at(sat+1,10)]);
+  return q;
+}
+let planOpen=null, planAt=null, planRem=30;
+const REM_OPTS=[[0,'Na hora'],[30,'30 min antes'],[60,'1h antes'],[1440,'1 dia antes']];
+const aid = (id,k) => { let h=7; for(const c of id+':'+k) h=(h*31+c.charCodeAt(0))>>>0; return (h%2000000000)+1; };
+function alarmStore(){ try{ return JSON.parse(localStorage.getItem('nc_alm')||'{}'); }catch(e){ return {}; } }
+function alarmSave(o){ try{ localStorage.setItem('nc_alm', JSON.stringify(o)); }catch(e){} }
+async function cancelAlarms(taskId){
+  const st=alarmStore(), cur=st[taskId]; if(!cur) return; delete st[taskId]; alarmSave(st);
+  const L=LN(); if(L){ try{ await L.cancel({notifications:(cur.ids||[]).map(id=>({id}))}); }catch(e){} }
+}
+async function scheduleAlarms(t){
+  const L=LN(); if(!L || !t.plan) return false;
+  const sig = t.plan.at+':'+(t.plan.rem||0)+':'+t.txt, st=alarmStore();
+  if(st[t.id] && st[t.id].sig===sig) return true;
+  try{
+    let p = await L.checkPermissions(); if(p.display!=='granted'){ p = await L.requestPermissions(); if(p.display!=='granted') return false; }
+    try{ await L.createChannel({id:'lembretes', name:'Lembretes', description:'Lembretes dos afazeres', importance:5, visibility:1, vibration:true}); }catch(e){}
+    await cancelAlarms(t.id);
+    const who = t.by===S.cfg.eu ? '' : ' (pedido de '+S.cfg.par+')';
+    const list=[]; const at=t.plan.at, rem=t.plan.rem||0;
+    if(rem>0 && at-rem*60000>now()) list.push({id:aid(t.id,1), title:'Já já: '+t.txt, body:'Daqui a '+(rem>=1440?'1 dia':rem>=60?(rem/60)+'h':rem+' min')+' — '+fmtAt(at)+who, schedule:{at:new Date(at-rem*60000), allowWhileIdle:true}, channelId:'lembretes'});
+    if(at>now()) list.push({id:aid(t.id,2), title:'⏰ É agora: '+t.txt, body:'Combinado para '+fmtAt(at)+who, schedule:{at:new Date(at), allowWhileIdle:true}, channelId:'lembretes'});
+    if(!list.length) return false;
+    await L.schedule({notifications:list});
+    st[t.id]={sig, ids:list.map(x=>x.id)}; alarmSave(st); return true;
+  }catch(e){ return false; }
+}
+let alarmBusy=false;
+async function syncAlarms(){
+  if(alarmBusy || !LN()) return; alarmBusy=true;
+  try{
+    const st=alarmStore(), open=new Set();
+    for(const t of live('tarefas')){ if(!t.done && t.plan && t.plan.by===S.cfg.eu && t.plan.at>now()){ open.add(t.id); await scheduleAlarms(t); } }
+    for(const id of Object.keys(st)){ if(!open.has(id)) await cancelAlarms(id); }
+  }finally{ alarmBusy=false; }
+}
+async function addToAgenda(t){
+  const P=capP('ApkInstaller'); if(!P||!P.addToCalendar){ toast('A agenda só abre no app instalado 📱'); return; }
+  try{ await P.addToCalendar({title:'🔧 '+t.txt, desc:'Combinado no Nosso Cantinho ('+(t.by===S.cfg.eu?'pedido seu':'pedido de '+S.cfg.par)+')', start:t.plan.at, end:t.plan.at+3600000}); }catch(e){ toast('Não consegui abrir a agenda'); }
+}
+function dueTag(t){ if(!t.plan || t.done) return ''; const d=t.plan.at-now(); if(d<0) return '<b class="due late">atrasado</b>'; if(new Date(t.plan.at).toDateString()===new Date().toDateString()) return '<b class="due today">hoje</b>'; return ''; }
 function vTarefas(){
-  const list = live('tarefas').sort((a,b)=> (a.done-b.done) || (b.t-a.t));
-  const row = x => `<div class="todo ${x.done?'done':''}"><button class="box" data-c="${x.id}">${x.done?'✓':''}</button>
-    <div class="tx">${esc(x.txt)}<div class="muted">${x.by===S.cfg.eu?'pedido por você':'pedido por '+esc(S.cfg.par)} · ${ago(x.t)}</div></div>
-    <button class="x" data-d="${x.id}">✕</button></div>`;
+  const list = live('tarefas').sort((a,b)=> (a.done-b.done) || ((a.plan&&!a.done?a.plan.at:9e15)-(b.plan&&!b.done?b.plan.at:9e15)) || (b.t-a.t));
+  const q = quickTimes();
+  const panel = x => `<div class="plan" data-p="${x.id}">
+      <div class="chips">${q.map(([n,v])=>`<button class="chip ${planAt===v?'on':''}" data-q="${v}">${n}</button>`).join('')}</div>
+      <input type="datetime-local" id="pdt" value="${planAt?toLocalInput(planAt):''}" style="margin-top:8px">
+      <div class="muted" style="margin:8px 0 4px">🔔 Me lembrar:</div>
+      <div class="chips">${REM_OPTS.map(([m,n])=>`<button class="chip ${planRem===m?'on':''}" data-r="${m}">${n}</button>`).join('')}</div>
+      <div class="row" style="margin-top:10px"><button class="btn" data-ps="${x.id}">Marcar e avisar 💗</button><button class="btn ghost" data-px="1">Cancelar</button></div></div>`;
+  const row = x => { const mine = x.by===S.cfg.eu; const pl = x.plan && !x.done;
+    return `<div class="todo ${x.done?'done':''}" style="flex-wrap:wrap"><button class="box" data-c="${x.id}">${x.done?'✓':''}</button>
+    <div class="tx">${esc(x.txt)}<div class="muted">${mine?'pedido por você':'pedido por '+esc(S.cfg.par)} · ${ago(x.t)}</div>
+      ${pl?`<div class="plan-line">📅 <b>${esc(fmtAt(x.plan.at))}</b> · ${x.plan.by===S.cfg.eu?'você vai fazer':esc(S.cfg.par)+' vai fazer'} ${dueTag(x)}</div>`:''}</div>
+    <button class="x" data-d="${x.id}">✕</button>
+    ${!x.done?`<div class="plan-actions">${!mine||pl?`<button class="chip" data-po="${x.id}">${pl?'🔁 Reagendar':'📅 Quando vou fazer?'}</button>`:''}${pl?`<button class="chip" data-ag="${x.id}">📅 Agenda do celular</button>`:''}</div>`:''}
+    ${planOpen===x.id?panel(x):''}</div>`; };
   const open = list.filter(x=>!x.done), fin = list.filter(x=>x.done).slice(0,12);
   $('#main').innerHTML = `
     <div class="card"><h2>Pedir um favorzinho 🔧</h2>
       <div class="row"><input id="tt" placeholder="ex: arrumar a porta do armário"><button class="btn" id="ta">+</button></div>
-      <p class="muted" style="margin:8px 0 0">Vale pra qualquer coisa de casa: consertar, comprar, lembrar…</p></div>
+      <p class="muted" style="margin:8px 0 0">Vale pra qualquer coisa de casa: consertar, comprar, lembrar… Quem vai fazer marca o dia e a hora, e o app avisa e cria o lembrete 📅</p></div>
     <div class="card"><h2>A fazer (${open.length})</h2>${open.length?open.map(row).join(''):'<p class="muted">Tudo em dia! 🎉</p>'}</div>
     ${fin.length?`<div class="card"><h2>Feitos ✅</h2>${fin.map(row).join('')}</div>`:''}`;
   const add = () => { const v=$('#tt').value.trim(); if(!v) return; S.tarefas.push({id:uid(), txt:v, by:S.cfg.eu, t:now(), u:now(), done:false});
     notify('Favorzinho novo 📝', S.cfg.nome+': '+v); commit(); };
   $('#ta').onclick = add; $('#tt').onkeydown = e => { if(e.key==='Enter') add(); };
   document.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const it=S.tarefas.find(x=>x.id===b.dataset.c); it.done=!it.done; it.u=now();
-    if(it.done){ floaty('✨',4); if(it.by!==S.cfg.eu) notify('Feito! ✅', S.cfg.nome+' fez: '+it.txt); } commit(); });
-  document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.tarefas.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
+    if(it.done){ floaty('✨',4); cancelAlarms(it.id); if(it.by!==S.cfg.eu) notify('Feito! ✅', S.cfg.nome+' fez: '+it.txt); } commit(); });
+  document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.tarefas.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); cancelAlarms(it.id); commit(); });
+  document.querySelectorAll('[data-po]').forEach(b => b.onclick = () => { const it=S.tarefas.find(x=>x.id===b.dataset.po); planOpen=it.id; planAt=it.plan?it.plan.at:null; planRem=it.plan&&it.plan.rem!=null?it.plan.rem:30; vTarefas(); });
+  document.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => addToAgenda(S.tarefas.find(x=>x.id===b.dataset.ag)));
+  document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { planAt=+b.dataset.q; vTarefas(); });
+  document.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { planRem=+b.dataset.r; const v=$('#pdt')&&$('#pdt').value; if(v) planAt=new Date(v).getTime(); vTarefas(); });
+  const dt=$('#pdt'); if(dt) dt.onchange = () => { planAt = dt.value ? new Date(dt.value).getTime() : null; vTarefas(); };
+  document.querySelectorAll('[data-px]').forEach(b => b.onclick = () => { planOpen=null; vTarefas(); });
+  document.querySelectorAll('[data-ps]').forEach(b => b.onclick = async () => {
+    const it=S.tarefas.find(x=>x.id===b.dataset.ps); const v=$('#pdt').value; if(v) planAt=new Date(v).getTime();
+    if(!planAt || planAt<now()-60000) return toast('Escolha um dia e hora no futuro 📅');
+    it.plan={at:planAt, rem:planRem, by:S.cfg.eu, t:now()}; it.u=now(); planOpen=null;
+    const ok = await scheduleAlarms(it);
+    notify('📅 '+S.cfg.nome+' marcou: '+it.txt, 'Vai fazer '+fmtAt(planAt)+' 💗');
+    toast(ok?'Marcado! Alarme criado ⏰':'Marcado! 📅'+(LN()?' (libere as notificações para o alarme)':'')); floaty('📅',4); commit(); });
 }
 
 /* --- fotos (Supabase Storage quando disponível) --- */
@@ -1356,6 +1438,7 @@ setTimeout(()=>$('#splash').classList.add('out'), 1300);
 setTimeout(()=>{ if(S.cfg.eu) birthdayFlow(); }, 1900);
 syncNow().then(()=>{ if(S.cfg.eu){ initPush(); rtConnect(); } });
 setInterval(() => { if(!document.hidden) syncNow(true); }, 8000);
+setTimeout(()=>{ try{ syncAlarms(); }catch(e){} }, 6000); setInterval(()=>{ try{ syncAlarms(); }catch(e){} }, 60000);
 document.addEventListener('visibilitychange', () => { if(document.hidden){ if(tab==='mais' && sub && sub.startsWith('hot')){ hotUnlocked=false; sub=null; } holdMe=false; } else { syncNow(true); rtConnect(); } });
 (function bgHearts(){ const d=document.createElement('div'); d.className='bgh'; const em=['💗','💖','✨','💕','🌸']; for(let i=0;i<10;i++){ const x=document.createElement('i'); x.textContent=em[i%em.length]; x.style.left=(Math.random()*95)+'vw'; x.style.fontSize=(14+Math.random()*16)+'px'; x.style.animationDuration=(14+Math.random()*14)+'s'; x.style.animationDelay=(-Math.random()*20)+'s'; d.appendChild(x);} document.body.appendChild(d); })();
 </script>
