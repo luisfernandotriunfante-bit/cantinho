@@ -349,7 +349,9 @@ async function saveToken(tok){
   try{ await fetch(BASE()+'/rest/v1/kv?on_conflict=key', {method:'POST', headers:Object.assign(H(),{Prefer:'resolution=merge-duplicates'}),
     body:JSON.stringify([{key:S.cfg.code+':token:'+S.cfg.eu, value:{token:tok,u:now()}, updated_at:new Date().toISOString()}])}); }catch(e){}
 }
+const PUSH_ON = false; // o build liga sozinho se existir google-services.json
 async function initPush(){
+  if(!PUSH_ON) return;
   try{
     const P = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.PushNotifications;
     if(!P || !remoteOn() || !S.cfg.eu) return;

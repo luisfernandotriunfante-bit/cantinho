@@ -51,7 +51,7 @@ jobs:
           grep -q REQUEST_INSTALL_PACKAGES android/app/src/main/AndroidManifest.xml || { echo "::error::PERMISSAO nao foi adicionada"; exit 1; }
       - name: Firebase (notificacoes push)
         run: |
-          if [ -f google-services.json ]; then cp google-services.json android/app/google-services.json; echo "google-services.json instalado"; else echo "sem google-services.json (push desligado)"; fi
+          if [ -f google-services.json ]; then cp google-services.json android/app/google-services.json; sed -i "s/const PUSH_ON = false;/const PUSH_ON = true;/" www/index.html; grep -c "PUSH_ON = true" www/index.html; echo "google-services.json instalado"; else echo "sem google-services.json (push desligado)"; fi
       - name: Icone do app
         continue-on-error: true
         run: npx @capacitor/assets generate --android --iconBackgroundColor '#ff9ec4' --iconBackgroundColorDark '#ff9ec4'
