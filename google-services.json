@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "230994329609",
+    "project_id": "nosso-cantinho-3b1e8",
+    "storage_bucket": "nosso-cantinho-3b1e8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:230994329609:android:9718be64873f5b093078d8",
+        "android_client_info": {
+          "package_name": "com.nosso.cantinho"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfRbDqQ9SsT_CPHWTOpkqN1DXkcGoY5ds"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
