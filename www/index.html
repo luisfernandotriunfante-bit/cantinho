@@ -216,11 +216,11 @@ function haptic(p){
   const pat = Array.isArray(p) ? p : [p];
   try{
     const Hp = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Haptics;
-    if(Hp && Hp.vibrate){ let t=0; pat.forEach((v,i)=>{ if(i%2===0){ setTimeout(()=>Hp.vibrate({duration:v}).catch(()=>{}), t); } t+=v; }); return; }
+    if(Hp && Hp.vibrate){ let t=0; pat.forEach((v,i)=>{ if(i%2===0){ setTimeout(()=>{ try{ Promise.resolve(Hp.vibrate({duration:Math.max(v,35)})).catch(()=>{ navigator.vibrate && navigator.vibrate(Math.max(v,35)); }); }catch(e){ navigator.vibrate && navigator.vibrate(Math.max(v,35)); } }, t); } t+=v; }); return; }
     navigator.vibrate && navigator.vibrate(pat);
   }catch(e){}
 }
-const HEART = [60,90,90];
+const HEART = [70,100,110];
 function buzz(n=10){ haptic(n); }
 document.addEventListener('click', e => { if(e.target.closest('button') && !e.target.closest('.hold,#beat')) buzz(8); });
 function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2400); }
@@ -326,11 +326,13 @@ async function syncNow(silent){
 }
 let last = null;
 function counts(){ return { pend:live('carinhos').filter(x=>!x.done&&x.by!==S.cfg.eu).length, notes:live('recados').filter(x=>x.by!==S.cfg.eu).length,
-  tasks:live('tarefas').filter(x=>x.by!==S.cfg.eu).length, cup:live('cupons').filter(x=>x.by!==S.cfg.eu).length }; }
+  tasks:live('tarefas').filter(x=>x.by!==S.cfg.eu).length, cup:live('cupons').filter(x=>x.by!==S.cfg.eu).length,
+  usedMine:live('cupons').filter(x=>x.by===S.cfg.eu && x.used && !x.ack).length }; }
 function detectNew(){
   const c = counts();
   if(last){
-    if(c.pend>last.pend){ toast('💗 Pedido novo de '+S.cfg.par+'!'); floaty('💗',5); }
+    if(c.usedMine>last.usedMine){ toast('🎟️ '+S.cfg.par+' usou um cupom seu! Hora de cumprir 💗'); haptic([60,80,60,80,120]); floaty('🎟️',6); banner('🎟️ '+S.cfg.par+' usou um cupom seu!', ()=>{ tab='home'; sub=null; render(); }); }
+    else if(c.pend>last.pend){ toast('💗 Pedido novo de '+S.cfg.par+'!'); floaty('💗',5); }
     else if(c.notes>last.notes) toast('💌 Recadinho novo!');
     else if(c.tasks>last.tasks) toast('📝 Favorzinho novo na lista');
     else if(c.cup>last.cup){ toast('🎟️ Você ganhou um cupom!'); floaty('🎟️',4); }
@@ -484,7 +486,10 @@ function vHome(){
     if(k===0) bday = `<div class="banner"><b>🎂 Hoje é o dia! 🎉</b></div>`;
     else if(k<=60) bday = `<div class="banner">🎂 faltam<br><b>${k} ${k===1?'dia':'dias'}</b><br>para o aniversário dela</div>`;
   }
-  $('#main').innerHTML = `${bday}${motivoCard()}
+  const usedMine = live('cupons').filter(x=>!x.hot && x.by===S.cfg.eu && x.used && !x.ack);
+  $('#main').innerHTML = `${bday}${usedMine.length?`<div class="card" style="border:2px solid var(--accent)"><h2>🎟️ ${esc(S.cfg.par)} usou ${usedMine.length>1?'cupons seus':'um cupom seu'}!</h2>${usedMine.map(x=>`
+      <div class="req"><div class="ic">${esc(x.e)}</div><div class="tx"><b>${esc(x.txt)}</b><span class="muted">usado ${ago(x.usedAt||x.u)}</span></div>
+      <button class="btn" data-ack="${x.id}">Cumprido ✅</button></div>`).join('')}</div>`:''}${motivoCard()}
     ${pend.length?`<div class="card"><h2>💌 ${esc(S.cfg.par)} está pedindo</h2>${pend.map(x=>`
       <div class="req"><div class="ic">${c(x.k).e}</div><div class="tx"><b>${esc(c(x.k).t)}</b><span class="muted">${ago(x.t)}</span></div>
       <button class="btn" data-ok="${x.id}">Atendido 💗</button></div>`).join('')}</div>`:''}
@@ -498,13 +503,18 @@ function vHome(){
       <div class="moods">${MOODS.map(([e,t])=>`<button class="mood ${my&&my.e===e?'on':''}" data-e="${e}">${e}<small>${t}</small></button>`).join('')}</div>
       <div class="mood-line"><div><div class="e">${my?my.e:'➖'}</div><div class="muted">você</div></div>
         <div><div class="e">${his?his.e:'➖'}</div><div class="muted">${esc(S.cfg.par)}${his&&his.txt?'<br>“'+esc(his.txt)+'”':''}</div></div></div>
-      <input id="mt" placeholder="Quer contar por quê? (opcional)" value="${esc(my?my.txt||'':'')}" style="margin-top:12px"></div>
+      <div class="row" style="margin-top:12px"><input id="mt" placeholder="Quer contar por quê? (opcional)" value="${esc(my?my.txt||'':'')}"><button class="btn" id="mts">Enviar 💌</button></div></div>
     ${mine.length?`<div class="card"><h2>⏳ Aguardando</h2>${mine.map(x=>`
       <div class="req"><div class="ic">${c(x.k).e}</div><div class="tx"><b>${esc(c(x.k).t)}</b><span class="muted">pedido ${ago(x.t)}</span></div>
       <button class="x" data-del="${x.id}">✕</button></div>`).join('')}</div>`:''}
     <div class="card"><h2>Carinhos dados 🥰 <span class="muted">(${live('carinhos').filter(x=>x.done).length} no total)</span></h2>
       ${done.length?done.map(x=>`<div class="req"><div class="ic">${c(x.k).e}</div><div class="tx"><b>${esc(c(x.k).t)}</b><span class="muted">${ago(x.doneAt||x.t)}</span></div></div>`).join(''):'<p class="muted">Ainda nenhum… bora começar!</p>'}
     </div>`;
+  document.querySelectorAll('[data-ack]').forEach(b => b.onclick = () => { const it=S.cupons.find(x=>x.id===b.dataset.ack); it.ack=true; it.ackAt=now(); it.u=now(); floaty('✅',5); confetti(1400); notify('Cupom cumprido ✅', S.cfg.nome+' cumpriu: '+it.txt); commit(); });
+  const sendMood = () => { const txt=$('#mt').value.trim(); const id=day+':'+S.cfg.eu; const it=S.humores.find(x=>x.id===id);
+    if(!it){ toast('Escolha primeiro como você está 😊'); return; } it.txt=txt; it.u=now(); it.del=false;
+    notify(S.cfg.nome+' está '+it.e, txt || 'Que tal mandar um carinho? 💗'); floaty('💌',3); toast('Enviado 💌'); commit(); };
+  $('#mts').onclick = sendMood; $('#mt').onkeydown = e => { if(e.key==='Enter') sendMood(); };
   document.querySelectorAll('.mood').forEach(b => b.onclick = () => {
     const e = b.dataset.e, txt = $('#mt').value.trim(); const id = day+':'+S.cfg.eu;
     const it = S.humores.find(x=>x.id===id);
@@ -664,6 +674,8 @@ function vCupons(hot){
   const cp = x => `<div class="coupon ${x.used?'used':''}"><div class="ic">${esc(x.e)}</div><div class="tx"><b>${esc(x.txt)}</b>
     <small>${x.used?'usado em '+new Date(x.usedAt).toLocaleDateString('pt-BR'):'de '+(x.by===S.cfg.eu?'você':esc(S.cfg.par))}</small></div>
     ${x.by!==S.cfg.eu && !x.used?`<button class="btn sm" data-u="${x.id}">Usar</button>`:''}
+    ${x.by!==S.cfg.eu && x.used && !x.ack?`<small>⏳ aguardando ${esc(S.cfg.par)} cumprir</small>`:''}
+    ${x.by===S.cfg.eu && x.used && !x.ack?`<button class="btn sm" data-k="${x.id}">Cumprido ✅</button>`:''}
     ${x.by===S.cfg.eu?`<button class="x" style="color:inherit" data-d="${x.id}">✕</button>`:''}</div>`;
   $('#main').innerHTML = `${backBtn}
     <div class="card"><h2>Dar um cupom 🎁</h2>
@@ -677,7 +689,8 @@ function vCupons(hot){
   $('#cadd').onclick = () => { const t=$('#ct').value.trim(), e=$('#ce').value.trim()||'🎁'; if(!t) return toast('Escreva o que o cupom vale');
     S.cupons.push({id:uid(), e, txt:t, by:S.cfg.eu, t:now(), u:now(), used:false, hot}); floaty('🎟️',5); hot ? neutral() : notify('Você ganhou um cupom! 🎟️', t); commit(); };
   document.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { const it=S.cupons.find(x=>x.id===b.dataset.u); it.used=true; it.usedAt=now(); it.u=now();
-    confetti(2200); haptic([40,60,40]); hot ? neutral() : notify('Cupom usado 🎟️', S.cfg.nome+' usou: '+it.txt); commit(); });
+    confetti(2200); haptic([40,60,40]); it.ack=false; hot ? neutral() : notify('🎟️ '+S.cfg.nome+' usou seu cupom!', 'Cupom: '+it.txt+' — hora de cumprir 💗'); commit(); });
+  document.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const it=S.cupons.find(x=>x.id===b.dataset.k); it.ack=true; it.ackAt=now(); it.u=now(); floaty('✅',5); confetti(1400); hot ? neutral() : notify('Cupom cumprido ✅', S.cfg.nome+' cumpriu: '+it.txt); commit(); });
   document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const it=S.cupons.find(x=>x.id===b.dataset.d); it.del=true; it.u=now(); commit(); });
 }
 
@@ -776,26 +789,27 @@ function vAjustes(){
   $('#cts').onclick = () => { S.cfg.carta=$('#cta').value.trim(); S.cfg.cartaV=now(); S.cfg.u=now(); S.seen.carta = S.cfg.eu==='ele' ? S.cfg.cartaV : 0; toast('Carta salva 💌'); commit(); };
   $('#ctp').onclick = () => { if(!$('#cta').value.trim()) return toast('Escreva a carta primeiro'); const keep=S.cfg.carta; S.cfg.carta=$('#cta').value.trim(); openLetter(true); S.cfg.carta=keep; };
   $('#cs').onclick = () => { S.cfg.inicio=$('#ci').value; S.cfg.niver=$('#cb').value; S.cfg.nome=$('#cn').value.trim()||S.cfg.nome; S.cfg.par=$('#cp').value.trim()||S.cfg.par;
-    S.cfg.code=$('#cc2').value.trim(); S.cfg.url=$('#cu').value.trim(); S.cfg.key=$('#ck').value.trim(); S.cfg.u=now(); toast('Salvo 💾'); commit(); initPush(); };
+    S.cfg.code=$('#cc2').value.trim(); S.cfg.url=$('#cu').value.trim(); S.cfg.key=$('#ck').value.trim(); S.cfg.u=now(); toast('Salvo 💾'); commit(); initPush(); try{ ws&&ws.close(); }catch(e){} ws=null; clearTimeout(wsRetry); setTimeout(rtConnect,400); };
 }
 
 /* ============ tempo real (Supabase Realtime via WebSocket) ============ */
-let ws=null, wsHb=null, wsRef=1, wsRetry=null, hisSeen=0, holdMe=false, holdHim=false, holdHimAt=0, holdTimer=null, lastPush={};
+let rtState='off', rtErr='', ws=null, wsHb=null, wsRef=1, wsRetry=null, hisSeen=0, holdMe=false, holdHim=false, holdHimAt=0, holdTimer=null, lastPush={};
 const rtTopic = () => 'realtime:nc-' + (S.cfg.code||'').replace(/[^a-zA-Z0-9_-]/g,'');
 const hisOnline = () => now()-hisSeen < 20000;
 function rtConnect(){
   if(!remoteOn() || !S.cfg.eu || ws) return;
   try{
-    ws = new WebSocket(BASE().replace(/^http/,'ws')+'/realtime/v1/websocket?apikey='+encodeURIComponent(S.cfg.key)+'&vsn=1.0.0');
+    rtState='connecting'; ws = new WebSocket(BASE().replace(/^http/,'ws')+'/realtime/v1/websocket?apikey='+encodeURIComponent(S.cfg.key)+'&vsn=1.0.0');
     ws.onopen = () => {
+      rtState='on'; rtErr=''; refreshToque();
       ws.send(JSON.stringify({topic:rtTopic(), event:'phx_join', payload:{config:{broadcast:{self:false,ack:false},presence:{key:''}}}, ref:String(wsRef++)}));
       wsHb = setInterval(()=>{ try{ ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:String(wsRef++)})); }catch(e){} }, 25000);
       setTimeout(()=>rtSend('here',{}), 600);
     };
-    ws.onmessage = m => { try{ const d=JSON.parse(m.data); if(d.event==='broadcast' && d.payload && d.payload.payload && d.payload.payload.by!==S.cfg.eu) onRt(d.payload.event, d.payload.payload); }catch(e){} };
-    const drop = () => { clearInterval(wsHb); ws=null; clearTimeout(wsRetry); wsRetry=setTimeout(rtConnect, 4000); };
-    ws.onclose = drop; ws.onerror = () => { try{ws.close();}catch(e){} };
-  }catch(e){ ws=null; }
+    ws.onmessage = m => { try{ const d=JSON.parse(m.data); if(d.event==='phx_reply' && d.topic===rtTopic()){ if(d.payload&&d.payload.status==='ok'){ rtState='on'; rtErr=''; } else { rtState='err'; rtErr=JSON.stringify(d.payload).slice(0,120); } refreshToque(); } if(d.event==='broadcast' && d.payload && d.payload.payload && d.payload.payload.by!==S.cfg.eu) onRt(d.payload.event, d.payload.payload); }catch(e){} };
+    const drop = () => { clearInterval(wsHb); ws=null; if(rtState==='on') rtState='connecting'; refreshToque(); clearTimeout(wsRetry); wsRetry=setTimeout(rtConnect, 4000); };
+    ws.onclose = drop; ws.onerror = () => { rtErr='falha ao conectar'; try{ws.close();}catch(e){} };
+  }catch(e){ ws=null; rtState='err'; rtErr=String(e); }
 }
 function rtSend(event, payload={}){
   if(!ws || ws.readyState!==1) return false;
@@ -819,7 +833,7 @@ function onRt(ev, p){
   }
   else if(ev==='beat'){ haptic(HEART); if(tab==='toque'){ const e=$('#pulse'); if(e){ e.textContent='💓'; e.style.transform='scale(1.25)'; setTimeout(()=>e.style.transform='',260);} } else toast('💓 '+par+' está pensando em você'); }
   else if(ev==='kiss'){ haptic([40,70,40,70,90]); floaty('💋',7); toast('😘 '+par+' mandou um beijinho'); }
-  else if(ev==='cafune'){ haptic(14); if(tab==='toque') floaty('✨',1); }
+  else if(ev==='cafune'){ haptic(40); if(tab==='toque') floaty('✨',1); }
 }
 function refreshHold(){
   const both = holdMe && holdHim;
@@ -829,18 +843,22 @@ function refreshHold(){
 }
 let tk=0;
 setInterval(()=>{ tk++; if(holdHim && now()-holdHimAt>2600){ holdHim=false; refreshHold(); } if(holdMe) rtSend('hold',{on:true}); if(tab==='toque'){ refreshToque(); if(tk%3===0) rtSend('here',{}); } }, 1000);
-function refreshToque(){ const o=$('#onl'); if(o){ o.className='online'+(hisOnline()?' on':''); const t=$('#onlt'); if(t) t.textContent = hisOnline()? S.cfg.par+' está aqui agora' : S.cfg.par+' não está no app agora'; } }
+function refreshToque(){ const rs=$('#rtst'); if(rs){ rs.textContent = !remoteOn() ? '⚠️ Falta configurar o Supabase em Nós → Ajustes' : rtState==='on' ? '📡 Conectado em tempo real' : rtState==='err' ? '⚠️ Tempo real com erro: '+rtErr : '📡 Conectando… (se demorar, confira a internet)'; }
+  const o=$('#onl'); if(o){ o.className='online'+(hisOnline()?' on':''); const t=$('#onlt'); if(t) t.textContent = hisOnline()? S.cfg.par+' está aqui agora' : S.cfg.par+' não está no app agora'; } }
 
 function toqueHtml(){
   const par = esc(S.cfg.par);
   return `<div class="card stage" style="text-align:center">
       <h2>🤝 Sentir de perto</h2>
       <div class="muted"><span id="onl" class="online"></span><span id="onlt"></span></div>
+      <div class="muted" id="rtst" style="font-size:12px"></div>
       <button class="hold" id="hold" style="width:160px;height:160px;font-size:58px">🤝</button>
       <div class="muted" id="holdst" style="min-height:38px"></div>
       <div class="row" style="margin-top:10px"><button class="btn tbtn" id="beat" style="padding:13px 8px;font-size:14px"><span id="pulse" style="transition:transform .25s;display:inline-block">💗</span> Batimento</button>
         <button class="btn tbtn" id="kiss" style="padding:13px 8px;font-size:14px">😘 Beijinho</button></div>
       <div class="pad" id="pad" style="height:84px;margin-top:12px">🪶 cafuné: deslize o dedo aqui<br>${par} sente no celular</div>
+      <button class="btn ghost" id="vtest" style="margin-top:12px;width:100%">📳 Testar a vibração do meu celular</button>
+      <div class="muted" id="vtst" style="font-size:12px;margin-top:6px"></div>
     </div>`;
 }
 function vToque(){ $('#main').innerHTML = toqueHtml(); toqueBind(); }
@@ -859,8 +877,10 @@ function toqueBind(){
   const bup = () => { clearInterval(bt); bt=null; beatOn=false; };
   B.addEventListener('pointerdown', bdown); ['pointerup','pointercancel','pointerleave'].forEach(t=>B.addEventListener(t,bup)); B.addEventListener('contextmenu',e=>e.preventDefault());
   $('#kiss').onclick = () => { haptic([40,70,40]); floaty('💋',5); if(!rtSend('kiss',{}) || !hisOnline()) pushOnce('kiss', S.cfg.nome+' mandou um beijinho 😘', 'Abra o app pra retribuir', 8000); };
+  $('#vtest').onclick = () => { const Hp = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Haptics; haptic([80,120,80,120,200]);
+    $('#vtst').textContent = (Hp&&Hp.vibrate ? 'Usando o vibrador do app' : (navigator.vibrate ? 'Usando o vibrador do navegador' : 'Este aparelho/navegador não tem vibração'))+'. Se não sentiu nada, confira se o celular não está no modo silencioso/mudo e se a vibração está ligada em Configurações → Sons e vibração.'; };
   let lastC=0; const pad=$('#pad');
-  const mv = e => { e.preventDefault(); const t=now(); if(t-lastC<180) return; lastC=t; haptic(10); rtSend('cafune',{}); };
+  const mv = e => { e.preventDefault(); const t=now(); if(t-lastC<220) return; lastC=t; haptic(35); rtSend('cafune',{}); };
   pad.addEventListener('pointermove', e=>{ if(e.buttons||e.pointerType==='touch') mv(e); });
 }
 
