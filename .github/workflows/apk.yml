@@ -37,6 +37,12 @@ jobs:
             exit 1
           fi
           echo "Chave fixa instalada."
+          cp ~/.android/debug.keystore "$GITHUB_WORKSPACE/fixa.keystore"
+          ALIAS=$(keytool -list -keystore "$GITHUB_WORKSPACE/fixa.keystore" -storepass android 2>/dev/null | grep -E "PrivateKeyEntry|trustedCertEntry" | head -1 | cut -d, -f1)
+          echo "Alias da chave: $ALIAS"
+          echo "KS_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          keytool -list -v -keystore "$GITHUB_WORKSPACE/fixa.keystore" -storepass android 2>/dev/null | grep -E "SHA256" | head -1 | sed 's/.*SHA256: *//' > "$GITHUB_WORKSPACE/esperada.txt"
+          echo "Impressao esperada: $(cat $GITHUB_WORKSPACE/esperada.txt)"
       - run: npx cap add android
       - name: Atualizador do app (plugin, permissao e numero da versao)
         run: |
@@ -56,6 +62,11 @@ jobs:
           grep -q "versionCode ${{ github.run_number }}" android/app/build.gradle || { echo "::error::VERSIONCODE nao foi alterado"; exit 1; }
           grep -q POST_NOTIFICATIONS android/app/src/main/AndroidManifest.xml || { echo "::error::POST_NOTIFICATIONS nao foi adicionada"; exit 1; }
           grep -q REQUEST_INSTALL_PACKAGES android/app/src/main/AndroidManifest.xml || { echo "::error::PERMISSAO nao foi adicionada"; exit 1; }
+      - name: Forcar assinatura com a chave fixa
+        run: |
+          sed -i "0,/^android {/s##android {\n    signingConfigs {\n        debug {\n            storeFile file('$GITHUB_WORKSPACE/fixa.keystore')\n            storePassword 'android'\n            keyAlias '$KS_ALIAS'\n            keyPassword 'android'\n        }\n    }#" android/app/build.gradle
+          sed -n 1,25p android/app/build.gradle
+          grep -q "fixa.keystore" android/app/build.gradle || { echo "::error::assinatura fixa nao foi aplicada"; exit 1; }
       - name: Firebase (notificacoes push)
         run: |
           if [ -f google-services.json ]; then cp google-services.json android/app/google-services.json; sed -i "s/const PUSH_ON = false;/const PUSH_ON = true;/" www/index.html; grep -c "PUSH_ON = true" www/index.html; echo "google-services.json instalado"; else echo "sem google-services.json (push desligado)"; fi
@@ -67,7 +78,11 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug
       - name: Impressao digital da assinatura (deve ser igual em todo build)
-        run: keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk | grep -E "SHA256|SHA-256" || true
+        run: |
+          GOT=$(keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk | grep -E "SHA256" | head -1 | sed 's/.*SHA256: *//')
+          echo "APK: $GOT"
+          echo "Chave: $(cat esperada.txt)"
+          [ "$GOT" = "$(cat esperada.txt)" ] || { echo "::error::O APK nao foi assinado com a chave fixa"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: nosso-cantinho-apk
