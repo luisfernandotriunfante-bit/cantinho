@@ -445,12 +445,26 @@ function render(keepScroll){
   if(keepScroll && !anim) main.scrollTop = y;
 }
 
+/* --- chave de acesso (backup do cadastro) --- */
+function makeKey(){ const c=S.cfg; return 'NC1.'+btoa(unescape(encodeURIComponent(JSON.stringify({u:c.url,k:c.key,c:c.code,e:c.eu,n:c.nome,p:c.par,i:c.inicio,v:c.niver})))); }
+function useKey(str){
+  try{
+    str=(str||'').trim(); if(str.indexOf('NC1.')!==0) return false;
+    const o=JSON.parse(decodeURIComponent(escape(atob(str.slice(4)))));
+    if(!o.c||!o.e) return false;
+    Object.assign(S.cfg,{url:o.u||'',key:o.k||'',code:o.c,eu:o.e,nome:o.n||'',par:o.p||'meu amor',inicio:o.i||'',niver:o.v||'',u:0});
+    saveLocal(); render(); syncNow(); initPush(); rtConnect(); return true;
+  }catch(e){ return false; }
+}
+
 /* --- setup inicial --- */
 function renderSetup(){
   $('#nav').innerHTML=''; $('#sub').textContent='';
   $('#main').innerHTML = `
     <div class="card"><h2>Bem-vindos! 🌷</h2>
       <p class="muted">Vamos deixar o cantinho de vocês do jeitinho de vocês. Cada um faz isso uma vez no seu celular.</p>
+      <div style="padding:10px;border-radius:12px;background:rgba(0,0,0,.05);margin-bottom:12px"><b>Já tem uma chave de acesso? 🔑</b>
+        <input id="s_chave" placeholder="Cole aqui (NC1.…)" style="margin-top:6px"><button class="btn ghost" id="s_kok" style="margin-top:6px">Entrar com a chave</button></div>
       <label class="l">Quem está usando este celular?</label>
       <div class="chips" id="who"><button class="chip" data-w="ela">Ela</button><button class="chip" data-w="ele">Ele</button></div>
       <label class="l">Seu nome (como aparece pro outro)</label><input id="s_nome" placeholder="Seu nome">
@@ -465,6 +479,7 @@ function renderSetup(){
       </details>
       <div style="margin-top:16px"><button class="btn" id="s_ok">Começar 💞</button></div>
     </div>`;
+  $('#s_kok').onclick = () => { if(!useKey($('#s_chave').value)) toast('Chave inválida'); };
   let who='';
   $('#who').querySelectorAll('button').forEach(b => b.onclick = () => { who=b.dataset.w; $('#who').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); });
   $('#s_ok').onclick = () => {
@@ -472,6 +487,7 @@ function renderSetup(){
     S.cfg.eu = who; S.cfg.nome = $('#s_nome').value.trim(); S.cfg.par = $('#s_par').value.trim() || 'meu amor';
     S.cfg.inicio = $('#s_ini').value; S.cfg.niver = $('#s_niver').value; S.cfg.code = $('#s_code').value.trim(); S.cfg.url = $('#s_url').value.trim(); S.cfg.key = $('#s_key').value.trim();
     S.cfg.u = now(); saveLocal(); render(); syncNow(); initPush(); rtConnect();
+    setTimeout(()=>toast('Em Ajustes → Chave de acesso 🔑 você guarda o cadastro pra não repetir'),2500);
   };
 }
 
@@ -866,8 +882,12 @@ function vAjustes(){
       <label class="l">Código secreto</label><input id="cc2" value="${esc(S.cfg.code)}">
       <label class="l">Supabase URL</label><input id="cu" value="${esc(S.cfg.url)}">
       <label class="l">Supabase chave anon</label><input id="ck" value="${esc(S.cfg.key)}">
-      <div style="margin-top:12px"><button class="btn" id="cs">Salvar</button></div></div>`;
+      <div style="margin-top:12px"><button class="btn" id="cs">Salvar</button></div></div>
+    <div class="card"><h2>Chave de acesso 🔑</h2>
+      <p class="muted" style="margin-top:0">Se um dia precisar reinstalar o app, é só colar esta chave na tela inicial e tudo volta (nomes, código, sincronização). Mande pra você mesmo no WhatsApp e guarde.</p>
+      <button class="btn" id="kcp">Copiar chave de acesso</button></div>`;
   goBack(); updBind();
+  $('#kcp').onclick = async () => { const k=makeKey(); try{ await navigator.clipboard.writeText(k); toast('Chave copiada 🔑 Cole no WhatsApp pra guardar'); }catch(e){ prompt('Copie esta chave:', k); } };
   $('#th').querySelectorAll('button').forEach(b => b.onclick = () => { S.cfg.tema=b.dataset.t; S.cfg.u=now(); applyTheme(); commit(); });
   $('#cts').onclick = () => { S.cfg.carta=$('#cta').value.trim(); S.cfg.cartaV=now(); S.cfg.u=now(); S.seen.carta = S.cfg.eu==='ele' ? S.cfg.cartaV : 0; toast('Carta salva 💌'); commit(); };
   $('#ctp').onclick = () => { if(!$('#cta').value.trim()) return toast('Escreva a carta primeiro'); const keep=S.cfg.carta; S.cfg.carta=$('#cta').value.trim(); openLetter(true); S.cfg.carta=keep; };
