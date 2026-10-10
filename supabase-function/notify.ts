@@ -42,7 +42,7 @@ async function accessToken(sa: any): Promise<string> {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   try {
-    const { code, to, title, body } = await req.json()
+    const { code, to, title, body, type } = await req.json()
     if (!code || !to) return new Response('bad request', { status: 400, headers: cors })
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     const { data } = await sb.from('kv').select('value').eq('key', `${code}:token:${to}`).maybeSingle()
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const r = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${at}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: { token, notification: { title, body }, android: { priority: 'HIGH' } } }),
+      body: JSON.stringify({ message: { token, notification: { title, body }, data: { type: String(type || '') }, android: { priority: 'HIGH', notification: { channel_id: 'alertas', sound: 'default', default_vibrate_timings: true } } } }),
     })
     return new Response(JSON.stringify({ sent: r.ok, status: r.status }), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch (e) {

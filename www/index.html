@@ -348,9 +348,9 @@ function detectNew(){
 function commit(){ saveLocal(); render(); syncNow(true).then(()=>{ rtSend('sync'); try{ syncAlarms(); }catch(e){} }); }
 
 /* ============ push (Capacitor + Firebase) ============ */
-async function notify(title, body){
+async function notify(title, body, type){
   if(!remoteOn()) return;
-  try{ fetch(BASE()+'/functions/v1/notify', {method:'POST', headers:H(), body:JSON.stringify({code:S.cfg.code, to:other(), title, body})}).catch(()=>{}); }catch(e){}
+  try{ fetch(BASE()+'/functions/v1/notify', {method:'POST', headers:H(), body:JSON.stringify({code:S.cfg.code, to:other(), title, body, type:type||''})}).catch(()=>{}); }catch(e){}
 }
 async function saveToken(tok){
   if(!remoteOn()) return;
@@ -364,9 +364,10 @@ async function initPush(){
     const P = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.PushNotifications;
     if(!P || !remoteOn() || !S.cfg.eu) return;
     const perm = await P.requestPermissions(); if(perm.receive!=='granted') return;
+    try{ await P.createChannel({id:'alertas', name:'Avisos do casal', description:'Pedidos, toques e novidades', importance:5, visibility:1, vibration:true}); }catch(e){}
     await P.addListener('registration', t => saveToken(t.value));
-    await P.addListener('pushNotificationReceived', () => syncNow(true));
-    await P.addListener('pushNotificationActionPerformed', () => syncNow(true));
+    await P.addListener('pushNotificationReceived', n => { syncNow(true); const ty=n&&n.data&&n.data.type; if(ty==='hold'){ banner('🤝 '+S.cfg.par+' está segurando sua mão', ()=>{ tab='toque'; sub=null; render(); }); haptic(HEART); } });
+    await P.addListener('pushNotificationActionPerformed', a => { syncNow(true); const ty=a&&a.notification&&a.notification.data&&a.notification.data.type; if(['hold','beat','kiss'].includes(ty)){ tab='toque'; sub=null; render(); rtConnect(); } });
     await P.register();
   }catch(e){}
 }
@@ -897,7 +898,7 @@ function rtSend(event, payload={}){
   if(!ws || ws.readyState!==1) return false;
   try{ ws.send(JSON.stringify({topic:rtTopic(), event:'broadcast', payload:{type:'broadcast', event, payload:Object.assign({by:S.cfg.eu}, payload)}, ref:String(wsRef++)})); return true; }catch(e){ return false; }
 }
-function pushOnce(key, title, body, gap=30000){ if(now()-(lastPush[key]||0) < gap) return; lastPush[key]=now(); notify(title, body); }
+function pushOnce(key, title, body, gap=30000, type){ if(now()-(lastPush[key]||0) < gap) return; lastPush[key]=now(); notify(title, body, type||key); }
 function banner(text, go){
   let b=$('#rtbanner'); if(!b){ b=document.createElement('button'); b.id='rtbanner'; document.body.appendChild(b); }
   b.textContent=text; b.classList.add('show'); b.onclick=()=>{ b.classList.remove('show'); go&&go(); };
@@ -924,7 +925,7 @@ function refreshHold(){
   if(both){ if(!holdTimer){ haptic(HEART); holdTimer=setInterval(()=>haptic(HEART),1100); } } else if(holdTimer){ clearInterval(holdTimer); holdTimer=null; }
 }
 let tk=0;
-setInterval(()=>{ tk++; if(holdHim && now()-holdHimAt>2600){ holdHim=false; refreshHold(); } if(holdMe) rtSend('hold',{on:true}); if(tab==='toque'){ refreshToque(); if(tk%3===0) rtSend('here',{}); } }, 1000);
+setInterval(()=>{ tk++; if(holdHim && now()-holdHimAt>2600){ holdHim=false; refreshHold(); } if(holdMe){ rtSend('hold',{on:true}); if(!hisOnline()) pushOnce('hold', '🤝 '+S.cfg.nome+' ainda está segurando a sua mão!', 'Corre pro app e segure junto 💗', 40000, 'hold'); } if(tab==='toque'){ refreshToque(); if(tk%3===0) rtSend('here',{}); } }, 1000);
 function refreshToque(){ const rs=$('#rtst'); if(rs){ rs.textContent = !remoteOn() ? '⚠️ Falta configurar o Supabase em Nós → Ajustes' : rtState==='on' ? '📡 Conectado em tempo real' : rtState==='err' ? '⚠️ Tempo real com erro: '+rtErr : '📡 Conectando… (se demorar, confira a internet)'; }
   const o=$('#onl'); if(o){ o.className='online'+(hisOnline()?' on':''); const t=$('#onlt'); if(t) t.textContent = hisOnline()? S.cfg.par+' está aqui agora' : S.cfg.par+' não está no app agora'; } }
 
@@ -949,13 +950,13 @@ function toqueBind(){
   refreshToque(); refreshHold();
   const H_ = $('#hold'); if(!H_) return;
   const down = e => { e.preventDefault(); if(holdMe) return; holdMe=true; haptic(25); rtSend('hold',{on:true}); refreshHold();
-    if(!hisOnline()) pushOnce('hold', S.cfg.nome+' quer segurar sua mão 🤝', 'Abra o app e segure o círculo também'); };
+    if(!hisOnline()) pushOnce('hold', '🤝 '+S.cfg.nome+' está segurando a sua mão!', 'Abra o app agora e segure junto 💗', 20000, 'hold'); };
   const up = e => { if(!holdMe) return; holdMe=false; rtSend('hold',{on:false}); refreshHold(); };
   H_.addEventListener('pointerdown', down); ['pointerup','pointercancel','pointerleave'].forEach(t=>H_.addEventListener(t, up));
   H_.addEventListener('contextmenu', e=>e.preventDefault());
   let bt=null; const B=$('#beat');
   const bdown = e => { e.preventDefault(); beatOn=true; const go=()=>{ haptic(HEART); const p=$('#pulse'); if(p){ p.style.transform='scale(1.5)'; setTimeout(()=>p.style.transform='',260);} rtSend('beat',{}); };
-    go(); bt=setInterval(go,900); if(!hisOnline()) pushOnce('beat', S.cfg.nome+' está pensando em você 💓', 'Abra o app'); };
+    go(); bt=setInterval(go,900); if(!hisOnline()) pushOnce('beat', S.cfg.nome+' está pensando em você 💓', 'Abra o app e sinta o batimento', 30000, 'beat'); };
   const bup = () => { clearInterval(bt); bt=null; beatOn=false; };
   B.addEventListener('pointerdown', bdown); ['pointerup','pointercancel','pointerleave'].forEach(t=>B.addEventListener(t,bup)); B.addEventListener('contextmenu',e=>e.preventDefault());
   $('#kiss').onclick = () => { haptic([40,70,40]); floaty('💋',5); if(!rtSend('kiss',{}) || !hisOnline()) pushOnce('kiss', S.cfg.nome+' mandou um beijinho 😘', 'Abra o app pra retribuir', 8000); };
