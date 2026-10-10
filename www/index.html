@@ -1417,6 +1417,7 @@ async function doInstall(){
     if(!(c && (c.value===true||c.allowed===true))){ st('Libere "Instalar apps desconhecidos" para o Nosso Cantinho e volte aqui 🔓'); await P.openSettings(); return; }
     UPD.busy=true; st('Baixando… 0%');
     try{ await P.addListener('progress', e=>{ const p=e.percent|0; st('Baixando… '+p+'%'); const b=$('#updbar'); if(b) b.style.width=p+'%'; }); }catch(e){}
+    try{ await P.addListener('result', e=>{ if(e.status==='ok') st('Atualizado! 💗'); else st('O Android recusou a instalação (código '+e.code+'): '+(e.message||'sem detalhe')); }); }catch(e){}
     await P.install({url:UPD.url});
     st('Abrindo o instalador… toque em "Atualizar" 💗');
   }catch(e){ st('Falhou: '+(e&&e.message||e)); }

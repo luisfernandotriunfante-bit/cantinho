@@ -85,18 +85,117 @@ public class ApkInstallerPlugin extends Plugin {
                     fo.close();
                     in.close();
 
-                    Uri uri = FileProvider.getUriForFile(getContext(),
-                            getContext().getPackageName() + ".fileprovider", out);
-                    Intent i = new Intent(Intent.ACTION_VIEW);
-                    i.setDataAndType(uri, "application/vnd.android.package-archive");
-                    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                    getContext().startActivity(i);
+                    if (total > 0 && out.length() != total) {
+                        call.reject("download incompleto (" + out.length() + " de " + total + " bytes)");
+                        return;
+                    }
+                    android.content.pm.PackageManager pm = getContext().getPackageManager();
+                    String me = getContext().getPackageName();
+                    int flags = Build.VERSION.SDK_INT >= 28
+                            ? android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+                            : android.content.pm.PackageManager.GET_SIGNATURES;
+                    android.content.pm.PackageInfo np = pm.getPackageArchiveInfo(out.getAbsolutePath(), flags);
+                    if (np == null) {
+                        call.reject("o arquivo baixado nao e um APK valido");
+                        return;
+                    }
+                    if (!me.equals(np.packageName)) {
+                        call.reject("APK de outro app: " + np.packageName);
+                        return;
+                    }
+                    android.content.pm.PackageInfo cur = pm.getPackageInfo(me, flags);
+                    long nv = Build.VERSION.SDK_INT >= 28 ? np.getLongVersionCode() : np.versionCode;
+                    long cv = Build.VERSION.SDK_INT >= 28 ? cur.getLongVersionCode() : cur.versionCode;
+                    if (nv <= cv) {
+                        call.reject("a versao baixada (" + nv + ") nao e mais nova que a instalada (" + cv + ")");
+                        return;
+                    }
+                    if (!sameSigner(np, cur)) {
+                        call.reject("ASSINATURA DIFERENTE: a versao instalada foi assinada com outra chave. Desinstale o app uma vez e instale o APK novo (os dados ficam na nuvem).");
+                        return;
+                    }
+                    installSession(out, call);
                     call.resolve();
                 } catch (Exception e) {
                     call.reject("falha: " + e.getMessage());
                 }
             }
         }).start();
+    }
+
+    private boolean sameSigner(android.content.pm.PackageInfo a, android.content.pm.PackageInfo b) {
+        try {
+            android.content.pm.Signature[] x, y;
+            if (Build.VERSION.SDK_INT >= 28) {
+                x = a.signingInfo.getApkContentsSigners();
+                y = b.signingInfo.getApkContentsSigners();
+            } else {
+                x = a.signatures;
+                y = b.signatures;
+            }
+            if (x == null || y == null) return true;
+            for (android.content.pm.Signature s1 : x)
+                for (android.content.pm.Signature s2 : y)
+                    if (s1.equals(s2)) return true;
+            return false;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    private void installSession(File apk, final PluginCall call) throws Exception {
+        final android.content.Context ctx = getContext();
+        final String action = ctx.getPackageName() + ".INSTALL_RESULT";
+        android.content.pm.PackageInstaller pi = ctx.getPackageManager().getPackageInstaller();
+        android.content.pm.PackageInstaller.SessionParams sp = new android.content.pm.PackageInstaller.SessionParams(
+                android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+        sp.setAppPackageName(ctx.getPackageName());
+        int id = pi.createSession(sp);
+        android.content.pm.PackageInstaller.Session ses = pi.openSession(id);
+        java.io.InputStream in = new java.io.FileInputStream(apk);
+        java.io.OutputStream os = ses.openWrite("update", 0, apk.length());
+        byte[] buf = new byte[65536];
+        int n;
+        while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
+        ses.fsync(os);
+        os.close();
+        in.close();
+        android.content.BroadcastReceiver rc = new android.content.BroadcastReceiver() {
+            @Override
+            public void onReceive(android.content.Context c, Intent it) {
+                int st = it.getIntExtra(android.content.pm.PackageInstaller.EXTRA_STATUS, -999);
+                if (st == android.content.pm.PackageInstaller.STATUS_PENDING_USER_ACTION) {
+                    Intent confirm = (Intent) it.getParcelableExtra(Intent.EXTRA_INTENT);
+                    if (confirm != null) {
+                        confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        c.startActivity(confirm);
+                    }
+                    return;
+                }
+                try { c.unregisterReceiver(this); } catch (Exception ignore) {}
+                if (st == android.content.pm.PackageInstaller.STATUS_SUCCESS) {
+                    JSObject r = new JSObject();
+                    r.put("status", "ok");
+                    notifyListeners("result", r);
+                } else {
+                    String msg = it.getStringExtra(android.content.pm.PackageInstaller.EXTRA_STATUS_MESSAGE);
+                    JSObject r = new JSObject();
+                    r.put("status", "erro");
+                    r.put("code", st);
+                    r.put("message", msg == null ? "" : msg);
+                    notifyListeners("result", r);
+                }
+            }
+        };
+        android.content.IntentFilter f = new android.content.IntentFilter(action);
+        if (Build.VERSION.SDK_INT >= 33) ctx.registerReceiver(rc, f, android.content.Context.RECEIVER_EXPORTED);
+        else ctx.registerReceiver(rc, f);
+        Intent cb = new Intent(action).setPackage(ctx.getPackageName());
+        int pf = android.app.PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= 31) pf |= android.app.PendingIntent.FLAG_MUTABLE;
+        android.app.PendingIntent pend = android.app.PendingIntent.getBroadcast(ctx, id, cb, pf);
+        ses.commit(pend.getIntentSender());
+        ses.close();
     }
 
     @PluginMethod
