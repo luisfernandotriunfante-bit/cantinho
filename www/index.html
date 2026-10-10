@@ -945,7 +945,7 @@ function refreshHold(){
   if(both){ if(!holdTimer){ haptic(HEART); holdTimer=setInterval(()=>haptic(HEART),1100); } } else if(holdTimer){ clearInterval(holdTimer); holdTimer=null; }
 }
 let tk=0;
-setInterval(()=>{ tk++; if(holdHim && now()-holdHimAt>2600){ holdHim=false; refreshHold(); } if(holdMe){ rtSend('hold',{on:true}); if(!hisOnline()) pushOnce('hold', '🤝 '+S.cfg.nome+' ainda está segurando a sua mão!', 'Corre pro app e segure junto 💗', 40000, 'hold'); } if(tab==='toque'){ refreshToque(); if(tk%3===0) rtSend('here',{}); } }, 1000);
+setInterval(()=>{ tk++; if(holdHim && now()-holdHimAt>2600){ holdHim=false; refreshHold(); } if(holdMe){ rtSend('hold',{on:true}); pushOnce('hold', '🤝 '+S.cfg.nome+' ainda está segurando a sua mão!', 'Corre pro app e segure junto 💗', 40000, 'hold'); } if(tab==='toque'){ refreshToque(); if(tk%3===0 && !document.hidden) rtSend('here',{}); } }, 1000);
 function refreshToque(){ const rs=$('#rtst'); if(rs){ rs.textContent = !remoteOn() ? '⚠️ Falta configurar o Supabase em Nós → Ajustes' : rtState==='on' ? '📡 Conectado em tempo real' : rtState==='err' ? '⚠️ Tempo real com erro: '+rtErr : '📡 Conectando… (se demorar, confira a internet)'; }
   const o=$('#onl'); if(o){ o.className='online'+(hisOnline()?' on':''); const t=$('#onlt'); if(t) t.textContent = hisOnline()? S.cfg.par+' está aqui agora' : S.cfg.par+' não está no app agora'; } }
 
@@ -970,16 +970,16 @@ function toqueBind(){
   refreshToque(); refreshHold();
   const H_ = $('#hold'); if(!H_) return;
   const down = e => { e.preventDefault(); if(holdMe) return; holdMe=true; haptic(25); rtSend('hold',{on:true}); refreshHold();
-    if(!hisOnline()) pushOnce('hold', '🤝 '+S.cfg.nome+' está segurando a sua mão!', 'Abra o app agora e segure junto 💗', 20000, 'hold'); };
+    pushOnce('hold', '🤝 '+S.cfg.nome+' está segurando a sua mão!', 'Abra o app agora e segure junto 💗', 20000, 'hold'); };
   const up = e => { if(!holdMe) return; holdMe=false; rtSend('hold',{on:false}); refreshHold(); };
   H_.addEventListener('pointerdown', down); ['pointerup','pointercancel','pointerleave'].forEach(t=>H_.addEventListener(t, up));
   H_.addEventListener('contextmenu', e=>e.preventDefault());
   let bt=null; const B=$('#beat');
   const bdown = e => { e.preventDefault(); beatOn=true; const go=()=>{ haptic(HEART); const p=$('#pulse'); if(p){ p.style.transform='scale(1.5)'; setTimeout(()=>p.style.transform='',260);} rtSend('beat',{}); };
-    go(); bt=setInterval(go,900); if(!hisOnline()) pushOnce('beat', S.cfg.nome+' está pensando em você 💓', 'Abra o app e sinta o batimento', 30000, 'beat'); };
+    go(); bt=setInterval(go,900); pushOnce('beat', S.cfg.nome+' está pensando em você 💓', 'Abra o app e sinta o batimento', 30000, 'beat'); };
   const bup = () => { clearInterval(bt); bt=null; beatOn=false; };
   B.addEventListener('pointerdown', bdown); ['pointerup','pointercancel','pointerleave'].forEach(t=>B.addEventListener(t,bup)); B.addEventListener('contextmenu',e=>e.preventDefault());
-  $('#kiss').onclick = () => { haptic([40,70,40]); floaty('💋',5); if(!rtSend('kiss',{}) || !hisOnline()) pushOnce('kiss', S.cfg.nome+' mandou um beijinho 😘', 'Abra o app pra retribuir', 8000); };
+  $('#kiss').onclick = () => { haptic([40,70,40]); floaty('💋',5); rtSend('kiss',{}); pushOnce('kiss', S.cfg.nome+' mandou um beijinho 😘', 'Abra o app pra retribuir', 8000); };
   $('#vtest').onclick = () => { const Hp = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Haptics; haptic([80,120,80,120,200]);
     $('#vtst').textContent = (Hp&&Hp.vibrate ? 'Usando o vibrador do app' : (navigator.vibrate ? 'Usando o vibrador do navegador' : 'Este aparelho/navegador não tem vibração'))+'. Se não sentiu nada, confira se o celular não está no modo silencioso/mudo e se a vibração está ligada em Configurações → Sons e vibração.'; };
   let lastC=0; const pad=$('#pad');
